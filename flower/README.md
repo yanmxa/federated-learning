@@ -16,6 +16,8 @@ pip -q install flwr torch torchvision
 
   ![DEMOs](./federated.gif) 
 
+- Federated learning show a lot of promise
+
   ![Accuracy](./accuracy.png)
 
 ## References
