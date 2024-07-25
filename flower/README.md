@@ -16,6 +16,8 @@ pip -q install flwr torch torchvision
 
   ![DEMOs](./federated.gif) 
 
+  ![Accuracy](./accuracy.png)
+
 ## References
 
 - [Get started with Flower](https://flower.ai/docs/framework/tutorial-series-get-started-with-flower-pytorch.html)
