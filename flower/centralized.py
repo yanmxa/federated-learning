@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+EPOCHS = 5
 
 class Net(nn.Module):
   def __init__(self) -> None:
@@ -57,7 +58,7 @@ def load_model():
 if __name__ == "__main__":
     net = load_model()
     trainloader, testloader = load_data()
-    train(net, trainloader, 5)
+    train(net, trainloader, EPOCHS)
     loss, accuracy = test(net, testloader)
     print(f"Loss: {loss:.5f}, Accuracy: {accuracy:.3f}")
 
