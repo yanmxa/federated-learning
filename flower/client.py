@@ -63,7 +63,7 @@ def test(net, testloader):
             loss += criterion(outputs, labels).item()
             correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
     accuracy = correct / len(testloader.dataset)
-    return loss/len(testloader.dataset), accuracy
+    return loss, accuracy
 
 # #############################################################################
 # 2. Federation of the pipeline with Flower

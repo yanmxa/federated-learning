@@ -10,11 +10,13 @@ pip -q install flwr torch torchvision
 
 - Define a CNN model and train it with `CIFAR-10` dataset
 
-- Federated: Split the dataset into 2 partitions, each client/organization will train its the local model using one of the partitions
+- DEMO1 - Federated: Set up 2 clients and split the dataset into 2 partitions, with each client training on one partition
 
-- Centralized: Train the model for 5 epochs using the entire dataset, while keeping all other hyperparameters the same as those used in the federated local model(client)
+- DEMO2 - Centralized: Train the model for 5 epochs on full dataset, using the same hyperparameters as the federated model
 
-  ![DEMOs](./federated.gif) 
+  <!-- ![DMOEs](./federated.gif) -->
+  [![asciicast](https://asciinema.org/a/669589.svg)](https://asciinema.org/a/669589)
+
 
 - Federated learning show a lot of promise
 
