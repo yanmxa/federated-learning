@@ -1,1 +1,11 @@
 .vscode
+*/cert
+
+data/
+cert/
+save/
+*.zip
+*.cast
+.workspace
+
+__pycache__

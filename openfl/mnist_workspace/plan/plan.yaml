@@ -1,0 +1,69 @@
+aggregator:
+  settings:
+    best_state_path: save/torch_cnn_mnist_best.pbuf
+    db_store_rounds: 2
+    init_state_path: save/torch_cnn_mnist_init.pbuf
+    last_state_path: save/torch_cnn_mnist_last.pbuf
+    log_metric_callback:
+      template: src.utils.write_metric
+    rounds_to_train: 10
+    write_logs: true
+  template: openfl.component.Aggregator
+assigner:
+  settings:
+    task_groups:
+    - name: train_and_validate
+      percentage: 1.0
+      tasks:
+      - aggregated_model_validation
+      - train
+      - locally_tuned_model_validation
+  template: openfl.component.RandomGroupedAssigner
+collaborator:
+  settings:
+    db_store_rounds: 1
+    delta_updates: false
+    opt_treatment: RESET
+  template: openfl.component.Collaborator
+compression_pipeline:
+  settings: {}
+  template: openfl.pipelines.NoCompressionPipeline
+data_loader:
+  settings:
+    batch_size: 256
+    collaborator_count: 2
+    data_group_name: mnist
+  template: src.dataloader.PyTorchMNISTInMemory
+network:
+  settings:
+    agg_addr: localhost
+    agg_port: 55513
+    cert_folder: cert
+    client_reconnect_interval: 5
+    disable_client_auth: false
+    hash_salt: auto
+    tls: true
+  template: openfl.federation.Network
+task_runner:
+  settings: {}
+  template: src.taskrunner.PyTorchCNN
+tasks:
+  aggregated_model_validation:
+    function: validate_task
+    kwargs:
+      apply: global
+      metrics:
+      - acc
+  locally_tuned_model_validation:
+    function: validate_task
+    kwargs:
+      apply: local
+      metrics:
+      - acc
+  settings: {}
+  train:
+    function: train_task
+    kwargs:
+      epochs: 1
+      metrics:
+      - loss
