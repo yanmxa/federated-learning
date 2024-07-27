@@ -85,9 +85,9 @@ $ pip -q install openfl
   [![asciicast](https://asciinema.org/a/669589.svg)](https://asciinema.org/a/669589)
 
 
-- Federated learning show a lot of promise
+- Collaborator Metrics
 
-  ![Accuracy](./accuracy.png)
+  ![Accuracy](./metrics-5round.png)
 
 ## References
 
