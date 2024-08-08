@@ -1,4 +1,58 @@
-# Flower Vs OpenFL
+# Federated Learning
+
+## What is Federated Learning?
+
+![alt text](./asset/image.png)
+
+### Challenges of Centralized Machine Learning
+
+- Data Privacy/Security
+
+- Efficiency(Bandwidth and Storage)
+
+- Examples:
+
+  - Sensitive healthcare records from multiple hospitals to train cancer detection models
+
+  - Financial information from different organizations to detect financial fraud
+
+  - Location data from your electric car to make better range prediction
+
+  - End-to-end encrypted messages to train better auto-complete models
+
+### Definitions
+
+Instead of moving the data to the computation, the FL moves the computation to the data.
+
+*Federated learning is a distributed machine learning approach that enables collaboration on machine learning projects without sharing sensitive data.*
+
+![alt text](./asset/fl.png)
+
+#### Collaborator
+
+- Edge devices like smartphones
+- Servers belongs to organizations
+
+#### Aggregator
+
+- Combine all the model updates from the Collaborator to one single model
+- The most basic way to do it is called [Federated Averaging](https://arxiv.org/abs/1602.05629)
+
+#### Round
+
+The following step 1 to 5 are what we call a single round of FL. 
+
+1. Initialize global model
+2. Send model to the connected collaborators
+3. Train the model with the local data
+4. Return model updates back to the sever
+5. Aggregate the model updates into a new global model
+
+*Repeat the above training process/steps over and over again to eventually arrive at a fully trained model that performs well across the data of all client nodes*
+
+## Frameworks
+
+### Flower Vs OpenFL
 
 | Criteria              | Flower                                             | OpenFL                                             |
 |-----------------------|----------------------------------------------------|----------------------------------------------------|
@@ -16,3 +70,13 @@
 | **Focus**             | Broad focus on federated learning use cases        | Strong enterprise focus with an emphasis on security and privacy |
 | **Programming Language** | Python                                            | Python                                             |
 
+**Note**
+
+Flower is user-friendly for migrating from centralized to federated learning and integrates with various ML frameworks. A notable achievement is training [a billion-scale LLM with Flower](https://arxiv.org/html/2405.10853v1). This is also a reflection of its increased activity.
+
+OpenFL, on the other hand, offers built-in secure communication between the Aggregator and Collaborators. It provides detailed user control, such as creating a Federation Plan. I personally appreciate the [Task AP](https://openfl.readthedocs.io/en/latest/about/features_index/taskrunner.html)I, which gives users flexibility in controlling which tasks are sent to collaborators.
+
+## Reference
+
+- [OpenFL Overview](https://openfl.readthedocs.io/en/latest/about/overview.html)
+- [Flower](https://flower.ai/docs/framework/tutorial-series-what-is-federated-learning.html)
