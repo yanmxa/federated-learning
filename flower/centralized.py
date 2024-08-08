@@ -19,10 +19,10 @@ class Net(nn.Module):
     self.fc3 = nn.Linear(84, 10)
 
   def forward(self, x: torch.Tensor) -> torch.Tensor:
-    x = self.pool(F.relu(self.conv1(x)))
-    x = self.pool(F.relu(self.conv2(x)))
-    x = x.view(-1, 16 * 5 * 5)
-    x = F.relu(self.fc1(x))
+    x = self.pool(F.relu(self.conv1(x))) # 3 * 6 * 5
+    x = self.pool(F.relu(self.conv2(x))) # 6 * 16 * 5
+    x = x.view(-1, 16 * 5 * 5) # 16*5*5  * 120
+    x = F.relu(self.fc1(x))    # 
     x = F.relu(self.fc2(x))
     return self.fc3(x)
 

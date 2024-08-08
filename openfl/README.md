@@ -78,6 +78,7 @@ $ pip -q install openfl
 
   ![Accuracy](./metrics-5round.png)
 
+
 ## References
 
 - [Go Federated with OpenFL](https://towardsdatascience.com/go-federated-with-openfl-8bc145a5ead1)
