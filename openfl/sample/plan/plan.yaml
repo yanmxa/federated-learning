@@ -6,7 +6,7 @@ aggregator:
     last_state_path: save/torch_cnn_mnist_last.pbuf
     log_metric_callback:
       template: src.utils.write_metric
-    rounds_to_train: 5
+    rounds_to_train: 3
     write_logs: true
   template: openfl.component.Aggregator
 assigner:
@@ -38,11 +38,11 @@ network:
   settings:
     agg_addr: localhost
     agg_port: 55513
-    # cert_folder: cert
+    cert_folder: cert
     client_reconnect_interval: 5
-    disable_client_auth: true
+    disable_client_auth: false
     hash_salt: auto
-    tls: false
+    tls: true
   template: openfl.federation.Network
 task_runner:
   settings: {}
@@ -52,21 +52,18 @@ tasks:
     function: validate_task
     kwargs:
       apply: global
-      use_tqdm: true
-    #   metrics:
-    #   - acc
+      metrics:
+      - acc
   locally_tuned_model_validation:
     function: validate_task
     kwargs:
       apply: local
-      use_tqdm: true
-    #   metrics:
-    #   - acc
+      metrics:
+      - acc
   settings: {}
   train:
     function: train_task
     kwargs:
       epochs: 1
-      use_tqdm: true
-    #   metrics:
-    #   - loss
+      metrics:
+      - loss
