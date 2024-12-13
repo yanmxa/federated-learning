@@ -1,0 +1,20 @@
+# Copyright (C) 2024 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+# ------------------------------------
+# Workspace Image
+# ------------------------------------
+ARG BASE_IMAGE=openfl:latest
+FROM ${BASE_IMAGE}
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+USER openfl
+ARG WORKSPACE_NAME
+COPY ${WORKSPACE_NAME}.zip .
+
+WORKDIR /home/openfl
+RUN fx workspace import --archive ${WORKSPACE_NAME}.zip && \
+    pip install -r ${WORKSPACE_NAME}/requirements.txt
+
+WORKDIR /home/openfl/${WORKSPACE_NAME}
+CMD ["/bin/bash"]
