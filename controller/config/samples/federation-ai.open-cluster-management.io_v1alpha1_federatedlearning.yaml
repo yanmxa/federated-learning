@@ -1,4 +1,4 @@
-apiVersion: example.com/v1alpha1
+apiVersion: federation-ai.open-cluster-management.io.open-cluster-management.io
 kind: FederatedLearning
 metadata:
   name: federated-learning-sample
@@ -14,4 +14,5 @@ spec:
   client:
     image: "client-image:latest"
     placement:
-      name: client-placement
+      name: federated-learning-client-placement
+      namespace: open-cluster-management

@@ -49,7 +49,8 @@ type ClientSpec struct {
 }
 
 type PlacementSpec struct {
-	Name string `json:"name,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 type ServerSpec struct {
