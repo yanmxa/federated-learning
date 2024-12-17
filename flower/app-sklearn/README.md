@@ -1,4 +1,4 @@
-# container-flower: A Flower / PyTorch app
+# app-sklearn: A Flower / sklearn app
 
 ## Install dependencies and project
 
@@ -8,7 +8,7 @@ pip install -e .
 
 ## Run with the Simulation Engine
 
-In the `container-flower` directory, use `flwr run` to run a local simulation:
+In the `app-sklearn` directory, use `flwr run` to run a local simulation:
 
 ```bash
 flwr run .

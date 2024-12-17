@@ -9,3 +9,10 @@ save/
 .workspace
 
 __pycache__
+
+build
+
+.devcontainer
+.github
+
+bin

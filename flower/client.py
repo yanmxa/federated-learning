@@ -78,7 +78,13 @@ parser.add_argument(
     type=int,
     help="Partition of the dataset divided into 2 iid partitions created artificially.",
 )
-partition_id = parser.parse_known_args()[0].partition_id
+parser.add_argument(
+    "--server-address", type=str, default="127.0.0.1:8080", help="Server Address"
+)
+args = parser.parse_args()
+
+partition_id = args.partition_id
+server_address = args.server_address
 
 # Load model and data (simple CNN, CIFAR-10)
 net = Net().to(DEVICE)
@@ -111,6 +117,6 @@ class FlowerClient(fl.client.NumPyClient):
     return float(loss), len(testloader.dataset), {"accuracy": accuracy}
   
 fl.client.start_client(
-  server_address="127.0.0.1:8080", 
+  server_address=server_address, 
   client=FlowerClient().to_client(),# <-- where FlowerClient is of type flwr.client.NumPyClient object
   )
