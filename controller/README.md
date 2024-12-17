@@ -1,16 +1,34 @@
-# controller
-// TODO(user): Add simple overview of use/purpose
+### Federated Learning Controller for Open Cluster Management
+
+![Controller Architecture](../asset/controller.png)
+
+This Kubernetes controller facilitates the startup and management of federated learning processes in an Open Cluster Management environment. The **Custom Resource Definition (CRD)** `FederatedLearning` represents a federated learning process that can adopt various frameworks, such as Flower, OpenFL, and others.
+
+---
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+
+- The controller reconciles `FederatedLearning` instances and, based on their configuration, manages the creation of **server** and **client** instances to start the model training and aggregation process.
+
+  - **Server**:
+    - A Kubernetes job created using the built-in manifest template.
+    - It expects a server image capable of starting with:
+      ```bash
+      server --num-rounds <number-of-rounds>
+      ```
+
+  - **Client**:
+    - A Kubernetes job created using **ManifestWorks** from the hub cluster.
+    - It expects a client image capable of starting with:
+      ```bash
+      client --data-config <data-configuration> --server-address <aggregator-address>
+      ```
+
+---
+
+This controller streamlines federated learning orchestration by leveraging Kubernetes-native resources to manage servers, clients, and the overall training process efficiently.
 
 ## Getting Started
-
-### Prerequisites
-- go version v1.22.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
 
 ### To Deploy on the cluster
 **Build and push your image to the location specified by `IMG`:**
