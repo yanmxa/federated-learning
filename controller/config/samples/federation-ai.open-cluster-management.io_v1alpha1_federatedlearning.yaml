@@ -1,0 +1,17 @@
+apiVersion: example.com/v1alpha1
+kind: FederatedLearning
+metadata:
+  name: federated-learning-sample
+spec:
+  framework: flower
+  server:
+    image: "server-image:latest"
+    rounds: 10
+    listeners:
+      - name: server-listener
+        port: 8080
+        type: nodePort
+  client:
+    image: "client-image:latest"
+    placement:
+      name: client-placement
