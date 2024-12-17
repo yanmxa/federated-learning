@@ -70,10 +70,9 @@ import argparse
 # Get partition id
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument(
-    "--partition-id",
-    choices=[0, 1],
-    default=0,
-    type=int,
+    "--data-config",
+    default="partition-0",
+    type=str,
     help="Partition of the dataset divided into 2 iid partitions created artificially.",
 )
 parser.add_argument(
@@ -81,7 +80,10 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-print(f"choose the dataset: {args.partition_id}")
+partition_id = str(args.data_config).split("-")[-1]
+partition_id = int(partition_id)
+
+print(f"choose the dataset: {partition_id}")
 
 fl.client.start_client(
   server_address=args.server_address, 
@@ -90,7 +92,7 @@ fl.client.start_client(
     node_id = "",
     state = None,
     node_config={
-      "partition-id": args.partition_id,
+      "partition-id": partition_id,
       "num-partitions": 2
     },
     run_config = {

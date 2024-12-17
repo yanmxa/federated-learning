@@ -13,8 +13,5 @@ build-flower-server:
 build-app-image:
 	cd flower/app-sklearn && docker build -t ${REGISTRY}/flower-app:${IMAGE_TAG} . -f Dockerfile && cd ../..
 
-build-flower-server-image:
-	cd flower && docker build -t ${REGISTRY}/federated-learning-server-flower:${IMAGE_TAG} . -f server.Dockerfile && cd ..
-
 clean:
 	rm -rf $(DIST_DIR) __pycache__ *.spec

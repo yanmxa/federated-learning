@@ -25,10 +25,15 @@ RUN pip install -e .
 # Copy the rest of the application files
 COPY . /app
 
+# Set the PYTHONPATH environment variable
+ENV PYTHONPATH=/app
+
+RUN chmod +x /app/entrypoint.sh
+
 # Set the default entrypoint to Python
-# 1. docker run --rm quay.io/myan/flower-app app_sklearn/server_app.py --num-rounds 20
-# 2. docker run my-python-image app_sklearn/client_app.py --partition-id 0
-ENTRYPOINT ["python"]
+# 1. docker run --rm -e PYTHONPATH=/app quay.io/myan/flower-app app_sklearn/server_app.py --num-rounds 20
+# 2. docker run --rm -e PYTHONPATH=/app quay.io/myan/flower-app app_sklearn/client_app.py --data-config "data-partition-1" --server-address 172.17.0.2:8080
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 
 
