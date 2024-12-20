@@ -8,7 +8,7 @@ metadata:
   name: federatedlearning-viewer-role
 rules:
 - apiGroups:
-  - federation-ai.open-cluster-management.io.open-cluster-management.io
+  - federation-ai.open-cluster-management.io
   resources:
   - federatedlearnings
   verbs:
@@ -16,7 +16,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - federation-ai.open-cluster-management.io.open-cluster-management.io
+  - federation-ai.open-cluster-management.io
   resources:
   - federatedlearnings/status
   verbs:

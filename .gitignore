@@ -16,3 +16,4 @@ build
 .github
 
 bin
+.ipynb_checkpoints

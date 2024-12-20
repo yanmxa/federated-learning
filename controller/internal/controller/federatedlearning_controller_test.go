@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	federationaiopenclustermanagementiov1alpha1 "github/open-cluster-management/federated-learning/api/v1alpha1"
+	flv1alpha1 "github/open-cluster-management/federated-learning/api/v1alpha1"
 )
 
 var _ = Describe("FederatedLearning Controller", func() {
@@ -40,13 +40,13 @@ var _ = Describe("FederatedLearning Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		federatedlearning := &federationaiopenclustermanagementiov1alpha1.FederatedLearning{}
+		federatedlearning := &flv1alpha1.FederatedLearning{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind FederatedLearning")
 			err := k8sClient.Get(ctx, typeNamespacedName, federatedlearning)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &federationaiopenclustermanagementiov1alpha1.FederatedLearning{
+				resource := &flv1alpha1.FederatedLearning{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,7 +59,7 @@ var _ = Describe("FederatedLearning Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &federationaiopenclustermanagementiov1alpha1.FederatedLearning{}
+			resource := &flv1alpha1.FederatedLearning{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 

@@ -33,7 +33,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	federationaiopenclustermanagementiov1alpha1 "github/open-cluster-management/federated-learning/api/v1alpha1"
+	flv1alpha1 "github/open-cluster-management/federated-learning/api/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -79,7 +79,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = federationaiopenclustermanagementiov1alpha1.AddToScheme(scheme.Scheme)
+	err = flv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme

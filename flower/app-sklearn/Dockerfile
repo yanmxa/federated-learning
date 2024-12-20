@@ -31,8 +31,8 @@ ENV PYTHONPATH=/app
 RUN chmod +x /app/entrypoint.sh
 
 # Set the default entrypoint to Python
-# 1. docker run --rm -e PYTHONPATH=/app quay.io/myan/flower-app app_sklearn/server_app.py --num-rounds 20
-# 2. docker run --rm -e PYTHONPATH=/app quay.io/myan/flower-app app_sklearn/client_app.py --data-config "data-partition-1" --server-address 172.17.0.2:8080
+# docker run --rm -v /home/myan/workspace/federated-learning:/data/model quay.io/myan/flower-app server --num-rounds 20 --min-available-clients 2
+# docker run --rm -e quay.io/myan/flower-app client --data-config "data-partition-1" --server-address 172.17.0.2:8080
 ENTRYPOINT ["/app/entrypoint.sh"]
 
 

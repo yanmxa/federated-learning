@@ -17,7 +17,8 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: FederatedLearning is the Schema for the federatedlearnings API.
+        description: FederatedLearning represents the schema for the federated learning
+          API.
         properties:
           apiVersion:
             description: |-
@@ -40,6 +41,8 @@ spec:
             description: FederatedLearningSpec defines the desired state of FederatedLearning.
             properties:
               client:
+                description: ClientSpec defines the specification for the client in
+                  federated learning.
                 properties:
                   image:
                     type: string
@@ -520,17 +523,18 @@ spec:
                     type: object
                 type: object
               framework:
-                enum:
-                - flower
-                - openfl
-                - other
+                default: other
+                description: Framework represents the federated learning framework.
                 type: string
               server:
+                description: ServerSpec defines the specification for the server in
+                  federated learning.
                 properties:
                   image:
                     type: string
                   listeners:
                     items:
+                      description: ListenerSpec defines the specification for a listener.
                       properties:
                         name:
                           type: string
@@ -540,18 +544,21 @@ spec:
                           type: string
                       type: object
                     type: array
+                  minClients:
+                    minimum: 1
+                    type: integer
                   rounds:
                     type: integer
                   storage:
+                    description: ModelStorageSpec defines the storage specification
+                      for the model.
                     properties:
-                      name:
-                        type: string
                       path:
                         type: string
                       size:
                         type: string
                       type:
-                        description: StorageType represents the type of storage
+                        description: StorageType represents the type of storage.
                         type: string
                     type: object
                 type: object
@@ -560,6 +567,8 @@ spec:
             description: FederatedLearningStatus defines the observed state of FederatedLearning.
             properties:
               clientStatus:
+                description: ClientStatus defines the status of the client in federated
+                  learning.
                 properties:
                   placementStatus:
                     properties:
@@ -661,14 +670,26 @@ spec:
                         type: integer
                     type: object
                 type: object
+              message:
+                type: string
               phase:
+                default: Pending
                 description: Phase represents the phase of the federated learning
                   process.
+                enum:
+                - Pending
+                - InProcess
+                - Completed
+                - Failed
+                - Start
                 type: string
               serverStatus:
+                description: ServerStatus defines the status of the server in federated
+                  learning.
                 properties:
                   listeners:
                     items:
+                      description: ListenerStatus defines the status of a listener.
                       properties:
                         address:
                           type: string

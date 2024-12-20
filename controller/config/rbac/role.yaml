@@ -5,7 +5,7 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - federation-ai.open-cluster-management.io.open-cluster-management.io
+  - federation-ai.open-cluster-management.io
   resources:
   - federatedlearnings
   verbs:
@@ -17,13 +17,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - federation-ai.open-cluster-management.io.open-cluster-management.io
+  - federation-ai.open-cluster-management.io
   resources:
   - federatedlearnings/finalizers
   verbs:
   - update
 - apiGroups:
-  - federation-ai.open-cluster-management.io.open-cluster-management.io
+  - federation-ai.open-cluster-management.io
   resources:
   - federatedlearnings/status
   verbs:

@@ -1,11 +1,9 @@
 /*
-Copyright 2024.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+  http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,64 +16,18 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clustersv1beta1 "open-cluster-management.io/api/cluster/v1beta1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// +kubebuilder:validation:Enum=flower;openfl;other
-type Framework string
-
-const (
-	Flower Framework = "flower"
-	OpenFL Framework = "openfl"
-	Other  Framework = "other"
-)
-
-// FederatedLearningSpec defines the desired state of FederatedLearning.
-type FederatedLearningSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// FrameworkSpec is the choosing federated learning framework running in the open cluster management environment
-	Framework Framework  `json:"framework,omitempty"`
-	Server    ServerSpec `json:"server,omitempty"`
-	Client    ClientSpec `json:"client,omitempty"`
-}
-
-type ClientSpec struct {
-	Image     string        `json:"image,omitempty"`
-	Placement PlacementSpec `json:"placement,omitempty"`
-}
-
-type PlacementSpec struct {
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-}
-
-type ServerSpec struct {
-	Image     string         `json:"image,omitempty"`
-	Rounds    int            `json:"rounds,omitempty"`
-	Listeners []ListenerSpec `json:"Listeners,omitempty"`
-}
-
-type ListenerSpec struct {
-	Name string `json:"name,omitempty"`
-	Port int    `json:"port,omitempty"`
-	Type string `json:"type,omitempty"`
-}
-
-// FederatedLearningStatus defines the observed state of FederatedLearning.
-type FederatedLearningStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+func init() {
+	SchemeBuilder.Register(&FederatedLearning{}, &FederatedLearningList{})
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Namespaced
 
-// FederatedLearning is the Schema for the federatedlearnings API.
+// FederatedLearning represents the schema for the federated learning API.
 type FederatedLearning struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -86,13 +38,104 @@ type FederatedLearning struct {
 
 // +kubebuilder:object:root=true
 
-// FederatedLearningList contains a list of FederatedLearning.
+// FederatedLearningList contains a list of FederatedLearning resources.
 type FederatedLearningList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []FederatedLearning `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&FederatedLearning{}, &FederatedLearningList{})
+// Framework represents the federated learning framework.
+type Framework string
+
+const (
+	Flower Framework = "flower"
+	OpenFL Framework = "openfl"
+	Other  Framework = "other"
+)
+
+// FederatedLearningSpec defines the desired state of FederatedLearning.
+type FederatedLearningSpec struct {
+	// +kubebuilder:default=other
+	Framework Framework  `json:"framework,omitempty"`
+	Server    ServerSpec `json:"server,omitempty"`
+	Client    ClientSpec `json:"client,omitempty"`
 }
+
+// ClientSpec defines the specification for the client in federated learning.
+type ClientSpec struct {
+	Image     string                        `json:"image,omitempty"`
+	Placement clustersv1beta1.PlacementSpec `json:"placement,omitempty"`
+}
+
+// ServerSpec defines the specification for the server in federated learning.
+type ServerSpec struct {
+	Image  string `json:"image,omitempty"`
+	Rounds int    `json:"rounds,omitempty"`
+	// +kubebuilder:validation:Minimum=1
+	MinClients int              `json:"minClients,omitempty"`
+	Listeners  []ListenerSpec   `json:"listeners,omitempty"`
+	Storage    ModelStorageSpec `json:"storage,omitempty"`
+}
+
+// ModelStorageSpec defines the storage specification for the model.
+type ModelStorageSpec struct {
+	Type StorageType `json:"type,omitempty"`
+	Path string      `json:"path,omitempty"`
+	Size string      `json:"size,omitempty"` // +optional
+}
+
+// StorageType represents the type of storage.
+type StorageType string
+
+const (
+	PersistentVolumeClaim StorageType = "PersistentVolumeClaim"
+	HostPathStorage       StorageType = "HostPath"
+)
+
+// ListenerSpec defines the specification for a listener.
+type ListenerSpec struct {
+	Name string `json:"name,omitempty"`
+	Port int    `json:"port,omitempty"`
+	Type string `json:"type,omitempty"`
+}
+
+// FederatedLearningStatus defines the observed state of FederatedLearning.
+type FederatedLearningStatus struct {
+	// +kubebuilder:validation:Enum=Pending;InProcess;Completed;Failed;Start
+	// +kubebuilder:default=Pending
+	Phase        Phase        `json:"phase,omitempty"`
+	Message      string       `json:"message,omitempty"`
+	ServerStatus ServerStatus `json:"serverStatus,omitempty"`
+	ClientStatus ClientStatus `json:"clientStatus,omitempty"`
+}
+
+// ClientStatus defines the status of the client in federated learning.
+type ClientStatus struct {
+	PlacementStatus clustersv1beta1.PlacementStatus `json:"placementStatus,omitempty"`
+}
+
+// ServerStatus defines the status of the server in federated learning.
+type ServerStatus struct {
+	ModelPath string           `json:"modelPath,omitempty"`
+	Listeners []ListenerStatus `json:"listeners,omitempty"`
+}
+
+// ListenerStatus defines the status of a listener.
+type ListenerStatus struct {
+	Name    string `json:"name,omitempty"`
+	Type    string `json:"type,omitempty"`
+	Address string `json:"address,omitempty"`
+	Port    int    `json:"port,omitempty"`
+}
+
+// Phase represents the phase of the federated learning process.
+type Phase string
+
+const (
+	PhaseStart     Phase = "Start" // Indicates the manual trigger to initiate the federated learning process
+	PhasePending   Phase = "Pending"
+	PhaseInProcess Phase = "InProcess"
+	PhaseCompleted Phase = "Completed"
+	PhaseFailed    Phase = "Failed"
+)

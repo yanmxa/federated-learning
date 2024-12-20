@@ -1,7 +1,8 @@
-apiVersion: federation-ai.open-cluster-management.io.open-cluster-management.io
+apiVersion: federation-ai.open-cluster-management.io/v1alpha1
 kind: FederatedLearning
 metadata:
   name: federated-learning-sample
+  namespace: open-cluster-management
 spec:
   framework: flower
   server:
@@ -10,9 +11,20 @@ spec:
     listeners:
       - name: server-listener
         port: 8080
-        type: nodePort
+        type: NodePort
+    storage:
+      type: PersistentVolumeClaim
+      name: model-pvc
+      path: /data/models
+      size: 10Gi
   client:
     image: "client-image:latest"
     placement:
-      name: federated-learning-client-placement
-      namespace: open-cluster-management
+      clusterSets:
+        - global
+      predicates:
+        - requiredClusterSelector:
+            claimSelector:
+              matchExpressions:
+                - key: federated-learning-sample/client-data
+                  operator: Exists
