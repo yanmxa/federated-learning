@@ -69,6 +69,7 @@ def start_server():
     
     args = parser.parse_args()
 
+    print(vars(args))
 
     # # Create LogisticRegression Model
     model = get_model("l2", 3)
@@ -89,7 +90,7 @@ def start_server():
     else:
         print("Loading model from", last_model_file)
         model = load_model(last_model_file)
-
+    
     initial_parameters = ndarrays_to_parameters(get_model_params(model))
     
     fl.server.start_server(

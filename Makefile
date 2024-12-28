@@ -13,5 +13,8 @@ build-flower-server:
 build-app-image:
 	cd flower/app-sklearn && docker build -t ${REGISTRY}/flower-app:${IMAGE_TAG} . -f Dockerfile && cd ../..
 
+push-app-image:
+	docker push ${REGISTRY}/flower-app:${IMAGE_TAG}
+
 clean:
 	rm -rf $(DIST_DIR) __pycache__ *.spec
