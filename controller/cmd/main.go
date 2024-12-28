@@ -30,6 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	clustersv1beta1 "open-cluster-management.io/api/cluster/v1beta1"
+	clusterv1beta2 "open-cluster-management.io/api/cluster/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -42,7 +44,7 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
+	scheme   = GetRuntimeScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
 
@@ -144,8 +146,9 @@ func main() {
 	}
 
 	if err = (&controller.FederatedLearningReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Manager: mgr,
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "FederatedLearning")
 		os.Exit(1)
@@ -166,4 +169,13 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func GetRuntimeScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(clustersv1beta1.AddToScheme(scheme)) // placement
+	utilruntime.Must(clusterv1beta2.AddToScheme(scheme))  // clustersetbinding
+
+	return scheme
 }

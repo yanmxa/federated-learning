@@ -25,7 +25,9 @@ func init() {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced,shortName=fl
+// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=".status.phase",description="The current phase of the FederatedLearning process"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // FederatedLearning represents the schema for the federated learning API.
 type FederatedLearning struct {
@@ -73,13 +75,14 @@ type ServerSpec struct {
 	Image  string `json:"image,omitempty"`
 	Rounds int    `json:"rounds,omitempty"`
 	// +kubebuilder:validation:Minimum=1
-	MinClients int              `json:"minClients,omitempty"`
-	Listeners  []ListenerSpec   `json:"listeners,omitempty"`
-	Storage    ModelStorageSpec `json:"storage,omitempty"`
+	MinAvailableClients int              `json:"minAvailableClients,omitempty"`
+	Listeners           []ListenerSpec   `json:"listeners,omitempty"`
+	Storage             ModelStorageSpec `json:"storage,omitempty"`
 }
 
 // ModelStorageSpec defines the storage specification for the model.
 type ModelStorageSpec struct {
+	Name string      `json:"name,omitempty"`
 	Type StorageType `json:"type,omitempty"`
 	Path string      `json:"path,omitempty"`
 	Size string      `json:"size,omitempty"` // +optional
@@ -103,7 +106,7 @@ type ListenerSpec struct {
 // FederatedLearningStatus defines the observed state of FederatedLearning.
 type FederatedLearningStatus struct {
 	// +kubebuilder:validation:Enum=Pending;InProcess;Completed;Failed;Start
-	// +kubebuilder:default=Pending
+	// +kubebuilder:default:=Pending
 	Phase        Phase        `json:"phase,omitempty"`
 	Message      string       `json:"message,omitempty"`
 	ServerStatus ServerStatus `json:"serverStatus,omitempty"`

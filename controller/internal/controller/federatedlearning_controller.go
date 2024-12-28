@@ -18,8 +18,12 @@ package controller
 
 import (
 	"context"
+	"time"
 
+	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,8 +31,17 @@ import (
 	flv1alpha1 "github/open-cluster-management/federated-learning/api/v1alpha1"
 )
 
+var (
+	PendingInitMessage            = "Transitioned to Pending phase"
+	PendingAvailableClientMessage = "Expected at least %d clients, but only %d clusters meet the criteria"
+	InProcessMessage              = "Selected %d clusters for the federated learning process"
+)
+
+const FederatedLearningFinalizer = "federated-learning.open-cluster-management.io/resource-cleanup"
+
 // FederatedLearningReconciler reconciles a FederatedLearning object
 type FederatedLearningReconciler struct {
+	ctrl.Manager
 	client.Client
 	Scheme *runtime.Scheme
 }
@@ -36,24 +49,57 @@ type FederatedLearningReconciler struct {
 // +kubebuilder:rbac:groups=federation-ai.open-cluster-management.io,resources=federatedlearnings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=federation-ai.open-cluster-management.io,resources=federatedlearnings/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=federation-ai.open-cluster-management.io,resources=federatedlearnings/finalizers,verbs=update
+// +kubebuilder:rbac:groups="route.openshift.io",resources=routes,verbs=get;list;watch;create;update;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;delete
 
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	instance := &flv1alpha1.FederatedLearning{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
-	if err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+	if err != nil && !errors.IsNotFound(err) {
+		return ctrl.Result{}, err
+	}
+	if errors.IsNotFound(err) {
+		return ctrl.Result{}, nil
 	}
 
-	if instance.Status.Phase == flv1alpha1.PhaseCompleted ||
+	defer func() {
+		if err != nil {
+			instance.Status.Message = err.Error()
+			instance.Status.Phase = flv1alpha1.PhaseFailed
+			if e := r.Update(ctx, instance); e != nil {
+				klog.Errorf("failed to update the instance phase into failed: %v", e)
+			}
+		}
+	}()
+
+	// add finalizer
+	if instance.DeletionTimestamp == nil && containsString(instance.Finalizers, FederatedLearningFinalizer) {
+		instance.Finalizers = append(instance.Finalizers, FederatedLearningFinalizer)
+		if err = r.Update(ctx, instance); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Initialize status.phase to Pending if not set
+	if instance.DeletionTimestamp == nil && instance.Status.Phase == "" {
+		instance.Status.Phase = flv1alpha1.PhasePending
+		instance.Status.Message = PendingInitMessage
+		if err := r.Status().Update(ctx, instance); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if instance.DeletionTimestamp == nil &&
+		instance.Status.Phase == flv1alpha1.PhaseCompleted ||
 		instance.Status.Phase == flv1alpha1.PhaseFailed {
 		klog.Infof("FederatedLearning %s is %s", instance.Name, instance.Status.Phase)
 		return ctrl.Result{}, nil
 	}
 
 	if instance.Status.Phase == flv1alpha1.PhaseStart {
-		instance.Status.Phase = flv1alpha1.PhaseInProcess
+		instance.Status.Phase = flv1alpha1.PhasePending
 		err = r.Client.Status().Update(ctx, instance)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -61,27 +107,42 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// Pending -> InProcess
-	// 1. storage
-	if instance.Spec.Server.Storage.Type == flv1alpha1.PersistentVolumeClaim {
-		err = r.CheckAndCreatePVC(ctx, instance.Namespace, instance.Name, instance.Spec.Server.Storage.Size)
-		if err != nil {
+	if instance.Status.Phase == flv1alpha1.PhasePending || instance.Status.Phase == flv1alpha1.PhaseInProcess {
+		// 1. server: storage, job (rounds, minAvailableClients)
+		if err := r.federatedLearningServer(ctx, instance); err != nil {
 			return ctrl.Result{}, err
+		}
+		// 2. client: placement(based on selected cluster -> InProcess), InProcess -> generate manifestwork
+		requeue, err := r.federatedLearningClient(ctx, instance)
+		if err != nil || requeue {
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, err
 		}
 	}
 
-	// 2. deploy the server job: storage, rounds, minClients
+	// InProcess -> Completed
+	if instance.Status.Phase == flv1alpha1.PhaseInProcess {
+		job := &batchv1.Job{}
+		err = r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: instance.Name}, job)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if job.Status.Succeeded > 0 {
+			instance.Status.Phase = flv1alpha1.PhaseCompleted
+			instance.Status.Message = "the models have been aggregated successfully!"
+			if err = r.Update(ctx, instance); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	}
 
-	// 3. generate the placement for the client
-
-	// 4. if the placementDecision is made, and the chooseCluster is meet the minClients, deploy the client job, and change the status to InProcess
-
-
-
-
-	// if the status is InProcess, check the serverJob, if it is completed, change the status to Completed, and extract the modelPath
-	// if the status is InProcess, check the serverJob, if it is failed, change the status to Failed, and extract the error message
-	// if the status is InProcess, check the serverJob, if it is running, do nothing and return
-
+	if instance.DeletionTimestamp != nil {
+		if containsString(instance.Finalizers, FederatedLearningFinalizer) {
+      instance.Finalizers = removeString(instance.Finalizers, FederatedLearningFinalizer)
+      if err = r.Update(ctx, instance); err != nil {
+        return ctrl.Result{}, err
+      }
+		}
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -92,4 +153,23 @@ func (r *FederatedLearningReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&flv1alpha1.FederatedLearning{}).
 		Named("federatedlearning").
 		Complete(r)
+}
+
+func containsString(slice []string, str string) bool {
+	for _, item := range slice {
+		if item == str {
+			return true
+		}
+	}
+	return false
+}
+
+func removeString(slice []string, str string) []string {
+	result := []string{}
+	for _, item := range slice {
+		if item != str {
+			result = append(result, item)
+		}
+	}
+	return result
 }

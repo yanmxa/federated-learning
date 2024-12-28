@@ -11,10 +11,20 @@ spec:
     kind: FederatedLearning
     listKind: FederatedLearningList
     plural: federatedlearnings
+    shortNames:
+    - fl
     singular: federatedlearning
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: The current phase of the FederatedLearning process
+      jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: FederatedLearning represents the schema for the federated learning
@@ -544,7 +554,7 @@ spec:
                           type: string
                       type: object
                     type: array
-                  minClients:
+                  minAvailableClients:
                     minimum: 1
                     type: integer
                   rounds:
@@ -553,6 +563,8 @@ spec:
                     description: ModelStorageSpec defines the storage specification
                       for the model.
                     properties:
+                      name:
+                        type: string
                       path:
                         type: string
                       size:

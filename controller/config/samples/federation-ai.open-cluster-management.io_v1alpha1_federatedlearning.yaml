@@ -1,13 +1,15 @@
+cat <<EOF | oc apply -f -
 apiVersion: federation-ai.open-cluster-management.io/v1alpha1
 kind: FederatedLearning
 metadata:
   name: federated-learning-sample
-  namespace: open-cluster-management
+  namespace: multicluster-global-hub
 spec:
   framework: flower
   server:
-    image: "server-image:latest"
+    image: quay.io/myan/flower-app
     rounds: 10
+    minAvailableClients: 2
     listeners:
       - name: server-listener
         port: 8080
@@ -16,9 +18,9 @@ spec:
       type: PersistentVolumeClaim
       name: model-pvc
       path: /data/models
-      size: 10Gi
+      size: 2Gi
   client:
-    image: "client-image:latest"
+    image: quay.io/myan/flower-app
     placement:
       clusterSets:
         - global
@@ -26,5 +28,6 @@ spec:
         - requiredClusterSelector:
             claimSelector:
               matchExpressions:
-                - key: federated-learning-sample/client-data
+                - key: federated-learning-sample.client-data
                   operator: Exists
+EOF
