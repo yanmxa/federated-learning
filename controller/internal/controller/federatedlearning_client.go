@@ -23,13 +23,12 @@ import (
 
 var clusterclientset *clusterclient.Clientset
 
-// +kubebuilder:rbac:groups=policy.open-cluster-management.io,resources=placementbindings,verbs=get;update;watch;list
-// +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=placementdecisions,verbs=get;update;watch;list
-// +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=placements,verbs=get;update;watch;list
+// +kubebuilder:rbac:groups=policy.open-cluster-management.io,resources=placementbindings,verbs=get;update;watch;list;delete
+// +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=placementdecisions,verbs=get;update;watch;list;delete
+// +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=placements,verbs=get;update;watch;list;delete
 // +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=managedclustersetbindings,verbs=get;update;watch;list
 // +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=managedclusters,verbs=get;update;watch;list
-// +kubebuilder:rbac:groups=work.open-cluster-management.io,resources=manifestworkreplicasets,verbs=get;list;watch;update
-// +kubebuilder:rbac:groups=work.open-cluster-management.io,resources=manifestworks,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups=work.open-cluster-management.io,resources=manifestworks,verbs=get;list;watch;update;delete
 
 func (r *FederatedLearningReconciler) federatedLearningClient(ctx context.Context,
 	instance *flv1alpha1.FederatedLearning,
@@ -163,6 +162,7 @@ func (r *FederatedLearningReconciler) pruneResources(ctx context.Context, instan
 			for _, clusterDecision := range decision.Status.Decisions {
 				namesapce := clusterDecision.ClusterName
 				work := &workv1.ManifestWork{}
+				log.Infow("delete the workload for the cluster", "cluster", namesapce)
 				err = r.Get(ctx, types.NamespacedName{Namespace: namesapce, Name: instance.Name}, work)
 				if err != nil && !errors.IsNotFound(err) {
 					return err
@@ -187,7 +187,7 @@ func (r *FederatedLearningReconciler) clusterWorkload(ctx context.Context, insta
 	clusterName, dataConfig string,
 ) error {
 	serverAddress := ""
-	for _, listener := range instance.Status.ServerStatus.Listeners {
+	for _, listener := range instance.Status.Listeners {
 		serverAddress = listener.Address
 	}
 	// if serverAddress == "" {

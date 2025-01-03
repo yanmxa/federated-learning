@@ -33,6 +33,7 @@ import (
 	clusterv1 "open-cluster-management.io/api/cluster/v1"
 	clustersv1beta1 "open-cluster-management.io/api/cluster/v1beta1"
 	clusterv1beta2 "open-cluster-management.io/api/cluster/v1beta2"
+	workv1 "open-cluster-management.io/api/work/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -178,5 +179,6 @@ func GetRuntimeScheme() *runtime.Scheme {
 	utilruntime.Must(clustersv1beta1.AddToScheme(scheme)) // placement
 	utilruntime.Must(clusterv1beta2.AddToScheme(scheme))  // clustersetbinding
 	utilruntime.Must(clusterv1.AddToScheme(scheme))       // managedcluster
+	utilruntime.Must(workv1.AddToScheme(scheme))          // work
 	return scheme
 }

@@ -5,7 +5,10 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 \
   PIP_NO_CACHE_DIR=1 \
   PIP_DISABLE_PIP_VERSION_CHECK=1 \
-  PIP_DEFAULT_TIMEOUT=100
+  PIP_DEFAULT_TIMEOUT=100 \
+  MPLCONFIGDIR=/tmp \
+  HF_HOME=/app/.cache/huggingface \
+  TRANSFORMERS_CACHE=/app/.cache/transformers
 
 # Set the working directory
 WORKDIR /app
@@ -24,6 +27,10 @@ RUN pip install -e .
 
 # Copy the rest of the application files
 COPY . /app
+
+# Ensure the cache directories have the correct permissions
+RUN mkdir -p /app/.cache && \
+  chmod -R 777 /app/.cache
 
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app

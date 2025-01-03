@@ -94,14 +94,16 @@ func (r *FederatedLearningReconciler) updateServerAddress(ctx context.Context, i
 		return false, err
 	}
 	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
-		log.Info("LoadBalancer service found")
+		log.Info("loadBalancer service found")
 		if len(svc.Status.LoadBalancer.Ingress) == 0 {
-			return false, fmt.Errorf("no load balancer ingress")
+			log.Info("loadBalancer service address is empty")
+			return true, nil
 		}
-		address := svc.Status.LoadBalancer.Ingress[0].Hostname
+		address := svc.Status.LoadBalancer.Ingress[0].Hostname + ":" + fmt.Sprintf("%d", svc.Spec.Ports[0].Port)
+
 		if address != "" && address != previousAddress[string(flv1alpha1.LoadBalancer)] {
 			newListeners := make([]flv1alpha1.ListenerStatus, 0)
-			for _, listener := range instance.Status.ServerStatus.Listeners {
+			for _, listener := range instance.Status.Listeners {
 				if listener.Type == flv1alpha1.LoadBalancer {
 					continue
 				} else {
@@ -115,8 +117,8 @@ func (r *FederatedLearningReconciler) updateServerAddress(ctx context.Context, i
 				// Port:    svc.Status.LoadBalancer.Ingress[0].Port,
 			})
 
-			instance.Status.ServerStatus.Listeners = newListeners
-			log.Infow("Update the server address", "address", address)
+			instance.Status.Listeners = newListeners
+			log.Infow("update the server address", "address", address)
 			if err := r.Status().Update(ctx, instance); err != nil {
 				return false, err
 			}
@@ -195,13 +197,13 @@ func (r *FederatedLearningReconciler) storage(ctx context.Context, instance *flv
 			if err := r.Create(ctx, newPVC); err != nil {
 				return err
 			}
-			log.Infow("Created PVC", "name", name, "namespace", namespace)
+			log.Infow("created PVC", "name", name, "namespace", namespace)
 			return nil
 		}
 		return err
 	}
 
 	// PVC exists
-	log.Infof("PVC already exists: %s", name)
+	log.Infof("storage PVC already exists: %s", name)
 	return nil
 }

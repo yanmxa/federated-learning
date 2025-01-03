@@ -108,10 +108,11 @@ type ListenerSpec struct {
 type FederatedLearningStatus struct {
 	// +kubebuilder:validation:Enum=Pending;InProcess;Completed;Failed;Start
 	// +kubebuilder:default:=Pending
-	Phase        Phase        `json:"phase,omitempty"`
-	Message      string       `json:"message,omitempty"`
-	ServerStatus ServerStatus `json:"serverStatus,omitempty"`
-	ClientStatus ClientStatus `json:"clientStatus,omitempty"`
+	Phase     Phase            `json:"phase,omitempty"`
+	Message   string           `json:"message,omitempty"`
+	Listeners []ListenerStatus `json:"listeners,omitempty"`
+	// ServerStatus ServerStatus `json:"serverStatus,omitempty"`
+	// ClientStatus ClientStatus `json:"clientStatus,omitempty"`
 }
 
 // ClientStatus defines the status of the client in federated learning.

@@ -78,7 +78,8 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}()
 
 	// add finalizer
-	if instance.DeletionTimestamp == nil && containsString(instance.Finalizers, FederatedLearningFinalizer) {
+	if instance.DeletionTimestamp == nil && !containsString(instance.Finalizers, FederatedLearningFinalizer) {
+		log.Info("FederatedLearning finalizer already exists")
 		instance.Finalizers = append(instance.Finalizers, FederatedLearningFinalizer)
 		if err = r.Update(ctx, instance); err != nil {
 			return ctrl.Result{}, err
@@ -95,7 +96,6 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	if instance.DeletionTimestamp == nil &&
-		instance.Status.Phase == flv1alpha1.PhaseCompleted ||
 		instance.Status.Phase == flv1alpha1.PhaseFailed {
 		log.Infof("FederatedLearning %s is %s", instance.Name, instance.Status.Phase)
 		return ctrl.Result{}, nil
@@ -137,15 +137,17 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// InProcess -> Completed
-	if instance.Status.Phase == flv1alpha1.PhaseInProcess {
+	if instance.Status.Phase == flv1alpha1.PhaseInProcess || instance.Status.Phase == flv1alpha1.PhaseCompleted {
 		job := &batchv1.Job{}
 		err = r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: instance.Name}, job)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		if job.Status.Succeeded > 0 {
+		message := "Model aggregated successfully. Directory: " + instance.Spec.Server.Storage.Path
+		if job.Status.Succeeded > 0 && message != instance.Status.Message {
+			log.Info("the job has been completed")
 			instance.Status.Phase = flv1alpha1.PhaseCompleted
-			instance.Status.Message = "the models have been aggregated successfully!"
+			instance.Status.Message = message
 			if err = r.Status().Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}

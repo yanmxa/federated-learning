@@ -3,7 +3,6 @@ package applier
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -96,7 +95,6 @@ func (d *deployer) deployDeployment(desiredObj, existingObj *unstructured.Unstru
 		!apiequality.Semantic.DeepDerivative(desiredObj.GetLabels(), existingObj.GetLabels()) ||
 		!apiequality.Semantic.DeepDerivative(desiredObj.GetAnnotations(), existingObj.GetAnnotations()) {
 		desiredObj.SetResourceVersion(existingObj.GetResourceVersion())
-		fmt.Println("========== Update ==========", existingObj.GetResourceVersion(), desiredObj.GroupVersionKind().Kind)
 		return d.client.Update(context.TODO(), desiredObj)
 	}
 	return nil

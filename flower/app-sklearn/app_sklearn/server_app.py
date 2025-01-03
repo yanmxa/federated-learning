@@ -11,31 +11,9 @@ import flwr as fl
 from datetime import datetime
 
 model_name = f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.pkl"
-model_dir = "/data/model"
 model = get_model("l2", 3)
     
-# Custom strategy to save the latest aggregated model
-class SaveLatestModelStrategy(fl.server.strategy.FedAvg):
-    def aggregate_fit(self, rnd, results, failures):
-        # Perform the default aggregation
-        aggregated_parameters, aggregated_metrics = super().aggregate_fit(rnd, results, failures)
 
-        if aggregated_parameters is not None:
-            print(f"Saving the latest aggregated model after round {rnd}...")
-            # Set the aggregated parameters to the model
-            # Convert `Parameters` to `list[np.ndarray]`
-            import numpy as np
-            aggregated_ndarrays: list[np.ndarray] = fl.common.parameters_to_ndarrays(
-                aggregated_parameters
-            )
-            
-            set_model_parameters(model, aggregated_ndarrays)
-            print(aggregated_ndarrays)
-            # Save only the latest aggregated model
-            model_file = os.path.join(model_dir, model_name)
-            save_model(model, model_file)
-
-        return aggregated_parameters, aggregated_metrics
 from typing import List, Tuple
 from flwr.common import Metrics
 
@@ -64,7 +42,7 @@ def start_server():
     )
     # default model path
     parser.add_argument(
-        "--model-dir", type=str, default="/data/model", help="Path to save the model.", required=False
+        "--model-dir", type=str, default="/data/models", help="Path to save the model.", required=False
     )
     
     args = parser.parse_args()
@@ -79,9 +57,9 @@ def start_server():
         os.makedirs(args.model_dir)
     model_dir = args.model_dir
     
-    # /data/model/init.*
-    # /data/model/2024-01-01-00-00-00.*
-    # /data/model/2024-01-02-00-00-00.*
+    # /data/models/init.*
+    # /data/models/2024-01-01-00-00-00.*
+    # /data/models/2024-01-02-00-00-00.*
     last_model_file = get_latest_model_file(args.model_dir)
     if last_model_file is None:
        # Setting initial parameters, akin to model.compile for keras models
@@ -92,6 +70,30 @@ def start_server():
         model = load_model(last_model_file)
     
     initial_parameters = ndarrays_to_parameters(get_model_params(model))
+    
+    
+    # Custom strategy to save the latest aggregated model
+    class SaveLatestModelStrategy(fl.server.strategy.FedAvg):
+      def aggregate_fit(self, rnd, results, failures):
+          # Perform the default aggregation
+          aggregated_parameters, aggregated_metrics = super().aggregate_fit(rnd, results, failures)
+
+          if aggregated_parameters is not None:
+              print(f"Saving the latest aggregated model after round {rnd}...")
+              # Set the aggregated parameters to the model
+              # Convert `Parameters` to `list[np.ndarray]`
+              import numpy as np
+              aggregated_ndarrays: list[np.ndarray] = fl.common.parameters_to_ndarrays(
+                  aggregated_parameters
+              )
+              
+              set_model_parameters(model, aggregated_ndarrays)
+              # print(aggregated_ndarrays)
+              # Save only the latest aggregated model
+              model_file = os.path.join(model_dir, model_name)
+              save_model(model, model_file)
+
+          return aggregated_parameters, aggregated_metrics
     
     fl.server.start_server(
       server_address=args.server_address,

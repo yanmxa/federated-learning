@@ -40,9 +40,18 @@ rules:
   resources:
   - managedclusters
   - managedclustersetbindings
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - cluster.open-cluster-management.io
+  resources:
   - placementdecisions
   - placements
   verbs:
+  - delete
   - get
   - list
   - update
@@ -78,6 +87,7 @@ rules:
   resources:
   - placementbindings
   verbs:
+  - delete
   - get
   - list
   - update
@@ -96,9 +106,9 @@ rules:
 - apiGroups:
   - work.open-cluster-management.io
   resources:
-  - manifestworkreplicasets
   - manifestworks
   verbs:
+  - delete
   - get
   - list
   - update

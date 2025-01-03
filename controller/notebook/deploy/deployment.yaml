@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jupyter-notebook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jupyter-notebook
+  template:
+    metadata:
+      labels:
+        app: jupyter-notebook
+    spec:
+      containers:
+      - name: jupyter-notebook
+        image: jupyter/base-notebook:latest
+        ports:
+        - containerPort: 8888
+        volumeMounts:
+        - name: model-storage
+          mountPath: /data
+        env:
+        - name: JUPYTER_ENABLE_LAB
+          value: "yes"
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: model-storage-pvc
