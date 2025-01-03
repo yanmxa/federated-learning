@@ -8,6 +8,8 @@ type FederatedLearningServerParams struct {
 	MinAvailableClients int
 	StorageName         string
 	StoragePath         string
+	ListenerType        string
+	ListenerPort        int
 }
 
 type FederatedLearningClientParams struct {

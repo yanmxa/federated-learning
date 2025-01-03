@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	clusterv1 "open-cluster-management.io/api/cluster/v1"
 	clustersv1beta1 "open-cluster-management.io/api/cluster/v1beta1"
 	clusterv1beta2 "open-cluster-management.io/api/cluster/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -176,6 +177,6 @@ func GetRuntimeScheme() *runtime.Scheme {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(clustersv1beta1.AddToScheme(scheme)) // placement
 	utilruntime.Must(clusterv1beta2.AddToScheme(scheme))  // clustersetbinding
-
+	utilruntime.Must(clusterv1.AddToScheme(scheme))       // managedcluster
 	return scheme
 }

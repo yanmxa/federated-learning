@@ -99,8 +99,9 @@ const (
 // ListenerSpec defines the specification for a listener.
 type ListenerSpec struct {
 	Name string `json:"name,omitempty"`
-	Port int    `json:"port,omitempty"`
-	Type string `json:"type,omitempty"`
+	// +kubebuilder:default:=8080
+	Port int          `json:"port,omitempty"`
+	Type ListenerType `json:"type,omitempty"`
 }
 
 // FederatedLearningStatus defines the observed state of FederatedLearning.
@@ -126,10 +127,10 @@ type ServerStatus struct {
 
 // ListenerStatus defines the status of a listener.
 type ListenerStatus struct {
-	Name    string `json:"name,omitempty"`
-	Type    string `json:"type,omitempty"`
-	Address string `json:"address,omitempty"`
-	Port    int    `json:"port,omitempty"`
+	Name    string       `json:"name,omitempty"`
+	Type    ListenerType `json:"type,omitempty"`
+	Address string       `json:"address,omitempty"`
+	Port    int          `json:"port,omitempty"`
 }
 
 // Phase represents the phase of the federated learning process.
@@ -141,4 +142,12 @@ const (
 	PhaseInProcess Phase = "InProcess"
 	PhaseCompleted Phase = "Completed"
 	PhaseFailed    Phase = "Failed"
+)
+
+type ListenerType string
+
+const (
+	LoadBalancer ListenerType = "LoadBalancer"
+	NodePort     ListenerType = "NodePort"
+	Route        ListenerType = "Route"
 )

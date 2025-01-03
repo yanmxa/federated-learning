@@ -24,17 +24,20 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	flv1alpha1 "github/open-cluster-management/federated-learning/api/v1alpha1"
+	"github/open-cluster-management/federated-learning/internal/logger"
 )
 
 var (
-	PendingInitMessage            = "Transitioned to Pending phase"
+	PendingInitMessage            = "Waiting for the server and clients to be ready"
 	PendingAvailableClientMessage = "Expected at least %d clients, but only %d clusters meet the criteria"
 	InProcessMessage              = "Selected %d clusters for the federated learning process"
+	log                           = logger.DefaultZapLogger()
 )
 
 const FederatedLearningFinalizer = "federated-learning.open-cluster-management.io/resource-cleanup"
@@ -68,8 +71,8 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if err != nil {
 			instance.Status.Message = err.Error()
 			instance.Status.Phase = flv1alpha1.PhaseFailed
-			if e := r.Update(ctx, instance); e != nil {
-				klog.Errorf("failed to update the instance phase into failed: %v", e)
+			if e := r.Status().Update(ctx, instance); e != nil {
+				log.Errorf("failed to update the instance phase into failed: %v", e)
 			}
 		}
 	}()
@@ -94,7 +97,7 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if instance.DeletionTimestamp == nil &&
 		instance.Status.Phase == flv1alpha1.PhaseCompleted ||
 		instance.Status.Phase == flv1alpha1.PhaseFailed {
-		klog.Infof("FederatedLearning %s is %s", instance.Name, instance.Status.Phase)
+		log.Infof("FederatedLearning %s is %s", instance.Name, instance.Status.Phase)
 		return ctrl.Result{}, nil
 	}
 
@@ -112,10 +115,24 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if err := r.federatedLearningServer(ctx, instance); err != nil {
 			return ctrl.Result{}, err
 		}
+
+		requeue, err := r.updateServerAddress(ctx, instance)
+		if err != nil {
+			log.Error(err, "failed to update the server address")
+			return ctrl.Result{}, err
+		}
+		if requeue {
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+		}
+
 		// 2. client: placement(based on selected cluster -> InProcess), InProcess -> generate manifestwork
-		requeue, err := r.federatedLearningClient(ctx, instance)
-		if err != nil || requeue {
-			return ctrl.Result{RequeueAfter: 5 * time.Second}, err
+		requeue, err = r.federatedLearningClient(ctx, instance)
+		if err != nil {
+			log.Error(err, "failed to update the client status")
+			return ctrl.Result{}, err
+		}
+		if requeue {
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 	}
 
@@ -129,7 +146,7 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if job.Status.Succeeded > 0 {
 			instance.Status.Phase = flv1alpha1.PhaseCompleted
 			instance.Status.Message = "the models have been aggregated successfully!"
-			if err = r.Update(ctx, instance); err != nil {
+			if err = r.Status().Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -137,10 +154,10 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	if instance.DeletionTimestamp != nil {
 		if containsString(instance.Finalizers, FederatedLearningFinalizer) {
-      instance.Finalizers = removeString(instance.Finalizers, FederatedLearningFinalizer)
-      if err = r.Update(ctx, instance); err != nil {
-        return ctrl.Result{}, err
-      }
+			instance.Finalizers = removeString(instance.Finalizers, FederatedLearningFinalizer)
+			if err = r.Update(ctx, instance); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 	}
 
@@ -151,6 +168,17 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 func (r *FederatedLearningReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&flv1alpha1.FederatedLearning{}).
+		WithEventFilter(predicate.Funcs{
+			CreateFunc: func(e event.CreateEvent) bool {
+				return true
+			},
+			DeleteFunc: func(e event.DeleteEvent) bool {
+				return true
+			},
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration()
+			},
+		}).
 		Named("federatedlearning").
 		Complete(r)
 }

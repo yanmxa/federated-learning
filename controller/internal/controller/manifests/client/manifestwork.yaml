@@ -4,6 +4,14 @@ metadata:
   name: {{.ManifestName}}
   namespace: {{.ManifestNamespace}}
 spec:
+  manifestConfigs:
+    - resourceIdentifier:
+        group: batch
+        resource: jobs
+        namespace: {{ .ClientJobNamespace }}
+        name: {{ .ClientJobName }}
+      updateStrategy:
+        type: ServerSideApply
   workload:
     manifests:
       - kind: Namespace
@@ -31,5 +39,5 @@ spec:
                 args:
                 - client # Maps to the entrypoint.sh logic
                 - --data-config={{ .ClientDataConfig }}
-                - --server-address={{ .MinAvailableClients }}
+                - --server-address={{ .ServerAddress }}
               restartPolicy: Never

@@ -8,7 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog/v2"
 	clusterclient "open-cluster-management.io/api/client/cluster/clientset/versioned"
 	clusterv1 "open-cluster-management.io/api/cluster/v1"
 	clusterv1beta1 "open-cluster-management.io/api/cluster/v1beta1"
@@ -60,8 +59,12 @@ func (r *FederatedLearningReconciler) federatedLearningClient(ctx context.Contex
 
 	// requeue if pending status
 	requeue, err = r.toInProcess(ctx, instance, placement)
-	if requeue || err != nil {
-		return requeue, err
+	if err != nil {
+		log.Error(err)
+		return false, err
+	}
+	if requeue {
+		return true, nil
 	}
 
 	// generate manifestwork for the selected cluster
@@ -77,6 +80,7 @@ func (r *FederatedLearningReconciler) federatedLearningClient(ctx context.Contex
 func (r *FederatedLearningReconciler) generateWorkload(ctx context.Context, instance *flv1alpha1.FederatedLearning,
 	placement *clusterv1beta1.Placement,
 ) error {
+	log.Info("generate the workload for the selected clusters")
 	// TODO: provide a reasonable way to determine the data configuration
 	dataKey := ""
 	for _, predicate := range placement.Spec.Predicates {
@@ -86,6 +90,7 @@ func (r *FederatedLearningReconciler) generateWorkload(ctx context.Context, inst
 			}
 		}
 	}
+	log.Infow("determine the dataKey", "dataKey", dataKey)
 	count := 0
 	for _, decisionGroup := range placement.Status.DecisionGroups {
 		for _, decisionName := range decisionGroup.Decisions {
@@ -97,8 +102,9 @@ func (r *FederatedLearningReconciler) generateWorkload(ctx context.Context, inst
 			}
 			// generate workload
 			for _, clusterDecision := range decision.Status.Decisions {
+				log.Infow("generate the workload for the cluster", "cluster", clusterDecision.ClusterName)
 				cluster := &clusterv1.ManagedCluster{}
-				if err := r.Get(ctx, types.NamespacedName{Namespace: clusterDecision.ClusterName}, cluster); err != nil {
+				if err := r.Get(ctx, types.NamespacedName{Name: clusterDecision.ClusterName}, cluster); err != nil {
 					return err
 				}
 				dataConfig := ""
@@ -111,6 +117,7 @@ func (r *FederatedLearningReconciler) generateWorkload(ctx context.Context, inst
 					return fmt.Errorf("failed to the dataConfig(%s) from cluster(%s)", dataKey, cluster.Name)
 				}
 				if err := r.clusterWorkload(ctx, instance, cluster.Name, dataConfig); err != nil {
+					log.Errorw("failed to generate the workload for the cluster", "cluster", cluster.Name, "error", err)
 					return err
 				}
 				count++
@@ -120,7 +127,7 @@ func (r *FederatedLearningReconciler) generateWorkload(ctx context.Context, inst
 		message := fmt.Sprintf("applied %d manifests to the clusters", count)
 		if instance.Status.Phase == flv1alpha1.PhaseInProcess && instance.Status.Message != message {
 			instance.Status.Message = message
-			if err := r.Update(ctx, instance); err != nil {
+			if err := r.Status().Update(ctx, instance); err != nil {
 				return err
 			}
 		}
@@ -220,10 +227,12 @@ func (r *FederatedLearningReconciler) toInProcess(ctx context.Context, instance 
 	selectedClusters := placement.Status.NumberOfSelectedClusters
 	minimizeClients := instance.Spec.Server.MinAvailableClients
 	if selectedClusters < int32(minimizeClients) {
+		log.Infow("waiting for the available clients", "selected", selectedClusters, "minimize", minimizeClients)
 		message := fmt.Sprintf(PendingAvailableClientMessage, minimizeClients, selectedClusters)
 		if message != instance.Status.Message {
 			instance.Status.Message = message
-			if err := r.Client.Update(ctx, instance); err != nil {
+			if err := r.Client.Status().Update(ctx, instance); err != nil {
+				log.Error(err)
 				return false, err
 			}
 		}
@@ -232,9 +241,10 @@ func (r *FederatedLearningReconciler) toInProcess(ctx context.Context, instance 
 
 	message := fmt.Sprintf(InProcessMessage, selectedClusters)
 	if instance.Status.Phase != flv1alpha1.PhaseInProcess || instance.Status.Message != message {
+		log.Infow("switch to InProcess", "message", message)
 		instance.Status.Phase = flv1alpha1.PhaseInProcess
 		instance.Status.Message = message
-		if err := r.Client.Update(ctx, instance); err != nil {
+		if err := r.Client.Status().Update(ctx, instance); err != nil {
 			return false, err
 		}
 	}
@@ -252,7 +262,7 @@ func (r *FederatedLearningReconciler) deployPlacement(ctx context.Context,
 		Spec: instance.Spec.Client.Placement,
 	}
 	// for namespaced resource, set ownerreference of controller
-	if err := controllerutil.SetControllerReference(expectedPlacement, instance, r.GetScheme()); err != nil {
+	if err := controllerutil.SetControllerReference(instance, expectedPlacement, r.GetScheme()); err != nil {
 		return err
 	}
 
@@ -262,7 +272,7 @@ func (r *FederatedLearningReconciler) deployPlacement(ctx context.Context,
 		if errors.IsNotFound(err) {
 			// Create the Placement if it does not exist
 
-			klog.Info("create the placement")
+			log.Info("create the placement")
 			if err := r.Create(ctx, expectedPlacement); err != nil {
 				return err
 			}
@@ -273,7 +283,7 @@ func (r *FederatedLearningReconciler) deployPlacement(ctx context.Context,
 		// If the Placement exists but differs, update it
 		if !reflect.DeepEqual(existingPlacement.Spec, expectedPlacement.Spec) {
 			existingPlacement.Spec = expectedPlacement.Spec
-			klog.Info("update the placement for clients")
+			log.Info("update the placement for clients")
 			if err := r.Update(ctx, existingPlacement); err != nil {
 				return err
 			}
@@ -301,10 +311,11 @@ func (r *FederatedLearningReconciler) deployPlacement(ctx context.Context,
 		}
 
 		// Attempt to get the existing Placement
-		existingClusterSetBinding := &clusterv1beta2.ManagedClusterSetBinding{}
-		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: instance.Name}, existingClusterSetBinding); err != nil {
+		existingClusterSetBinding, err := clusterclientset.ClusterV1beta2().ManagedClusterSetBindings(instance.Namespace).Get(ctx, clusterSet, metav1.GetOptions{})
+
+		if err != nil {
 			if errors.IsNotFound(err) {
-				klog.Info("create the clustersetbinding for clients")
+				log.Info("create the clustersetbinding for clients")
 				_, err = clusterclientset.ClusterV1beta2().ManagedClusterSetBindings(instance.Namespace).Create(
 					ctx, expectedClusterSetBinding, metav1.CreateOptions{})
 				if err != nil {
@@ -317,7 +328,7 @@ func (r *FederatedLearningReconciler) deployPlacement(ctx context.Context,
 			// If the Placement exists but differs, update it
 			if !reflect.DeepEqual(existingClusterSetBinding.Spec, expectedClusterSetBinding.Spec) {
 				existingClusterSetBinding.Spec = expectedClusterSetBinding.Spec
-				klog.Info("update the clustersetbinding for clients")
+				log.Info("update the clustersetbinding for clients")
 				_, err = clusterclientset.ClusterV1beta2().ManagedClusterSetBindings(instance.Namespace).Update(ctx, existingClusterSetBinding, metav1.UpdateOptions{})
 				if err != nil {
 					return err
@@ -326,5 +337,6 @@ func (r *FederatedLearningReconciler) deployPlacement(ctx context.Context,
 		}
 	}
 
+	log.Info("placement and clustersetbinding are ready")
 	return nil
 }

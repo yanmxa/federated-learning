@@ -14,7 +14,6 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/restmapper"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -23,7 +22,12 @@ import (
 	"github/open-cluster-management/federated-learning/internal/controller/manifests/applier"
 )
 
+var previousAddress map[string]string = make(map[string]string)
+
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=create;delete;get;list;watch;update
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch
 
 func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Context, instance *flv1alpha1.FederatedLearning) error {
 	// don't delete the storage and cause the job's owner is instance
@@ -32,6 +36,15 @@ func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Contex
 	}
 	if err := r.storage(ctx, instance); err != nil {
 		return err
+	}
+
+	if instance.Spec.Server.Listeners == nil || len(instance.Spec.Server.Listeners) == 0 {
+		return fmt.Errorf("no listeners specified")
+	}
+
+	if instance.Spec.Server.Listeners[0].Type != flv1alpha1.LoadBalancer &&
+		instance.Spec.Server.Listeners[0].Type != flv1alpha1.NodePort {
+		return fmt.Errorf("unsupported listener type: %s", instance.Spec.Server.Listeners[0].Type)
 	}
 
 	render, deployer := applier.NewRenderer(manifests.ServerFiles), applier.NewDeployer(r.Client)
@@ -44,6 +57,8 @@ func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Contex
 			MinAvailableClients: instance.Spec.Server.MinAvailableClients,
 			StoragePath:         instance.Spec.Server.Storage.Path,
 			StorageName:         instance.Spec.Server.Storage.Name,
+			ListenerType:        string(instance.Spec.Server.Listeners[0].Type),
+			ListenerPort:        instance.Spec.Server.Listeners[0].Port,
 		}, nil
 	})
 	if err != nil {
@@ -67,7 +82,55 @@ func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Contex
 			return err
 		}
 	}
+
 	return nil
+}
+
+// get the address by NodePort, LoadBalancer or Route
+func (r *FederatedLearningReconciler) updateServerAddress(ctx context.Context, instance *flv1alpha1.FederatedLearning) (bool, error) {
+	log.Info("update the server address for the clients")
+	svc := corev1.Service{}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(instance), &svc); err != nil {
+		return false, err
+	}
+	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+		log.Info("LoadBalancer service found")
+		if len(svc.Status.LoadBalancer.Ingress) == 0 {
+			return false, fmt.Errorf("no load balancer ingress")
+		}
+		address := svc.Status.LoadBalancer.Ingress[0].Hostname
+		if address != "" && address != previousAddress[string(flv1alpha1.LoadBalancer)] {
+			newListeners := make([]flv1alpha1.ListenerStatus, 0)
+			for _, listener := range instance.Status.ServerStatus.Listeners {
+				if listener.Type == flv1alpha1.LoadBalancer {
+					continue
+				} else {
+					newListeners = append(newListeners, listener)
+				}
+			}
+			newListeners = append(newListeners, flv1alpha1.ListenerStatus{
+				Name:    fmt.Sprintf("listener(service):%s", svc.Name),
+				Type:    flv1alpha1.LoadBalancer,
+				Address: address,
+				// Port:    svc.Status.LoadBalancer.Ingress[0].Port,
+			})
+
+			instance.Status.ServerStatus.Listeners = newListeners
+			log.Infow("Update the server address", "address", address)
+			if err := r.Status().Update(ctx, instance); err != nil {
+				return false, err
+			}
+			previousAddress[string(flv1alpha1.LoadBalancer)] = address
+			return false, nil
+		} else if address == "" {
+			log.Info("LoadBalancer address is empty")
+			return true, nil
+		} else {
+			log.Info("LoadBalancer address is not changed")
+		}
+		return false, nil
+	}
+	return false, nil
 }
 
 func SetOwner(objects []*unstructured.Unstructured,
@@ -132,13 +195,13 @@ func (r *FederatedLearningReconciler) storage(ctx context.Context, instance *flv
 			if err := r.Create(ctx, newPVC); err != nil {
 				return err
 			}
-			klog.Info("Created PVC", "name", name, "namespace", namespace)
+			log.Infow("Created PVC", "name", name, "namespace", namespace)
 			return nil
 		}
 		return err
 	}
 
 	// PVC exists
-	klog.Infof("PVC already exists: %s", name)
+	log.Infof("PVC already exists: %s", name)
 	return nil
 }

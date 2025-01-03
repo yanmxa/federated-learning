@@ -3,6 +3,7 @@ package applier
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -44,6 +45,7 @@ func NewDeployer(client client.Client) Deployer {
 		"ClusterRole":        deployer.deployClusterRole,
 		"ClusterRoleBinding": deployer.deployClusterRoleBinding,
 		"PodMonitor":         deployer.deployPodMonitor,
+		"ManifestWork":       deployer.deployDeployment,
 	}
 	return deployer
 }
@@ -93,6 +95,8 @@ func (d *deployer) deployDeployment(desiredObj, existingObj *unstructured.Unstru
 	if !apiequality.Semantic.DeepDerivative(desiredObj.Object["spec"], existingObj.Object["spec"]) ||
 		!apiequality.Semantic.DeepDerivative(desiredObj.GetLabels(), existingObj.GetLabels()) ||
 		!apiequality.Semantic.DeepDerivative(desiredObj.GetAnnotations(), existingObj.GetAnnotations()) {
+		desiredObj.SetResourceVersion(existingObj.GetResourceVersion())
+		fmt.Println("========== Update ==========", existingObj.GetResourceVersion(), desiredObj.GroupVersionKind().Kind)
 		return d.client.Update(context.TODO(), desiredObj)
 	}
 	return nil
