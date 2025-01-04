@@ -1,4 +1,4 @@
-### Federated Learning Controller for Open Cluster Management
+# Federated Learning Controller for Open Cluster Management
 
 ![Controller Architecture](../asset/controller.png)
 
