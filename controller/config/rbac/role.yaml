@@ -8,7 +8,6 @@ rules:
   - ""
   resources:
   - nodes
-  - pods
   verbs:
   - get
   - list
@@ -17,6 +16,8 @@ rules:
   - ""
   resources:
   - persistentvolumeclaims
+  - pods
+  - services
   verbs:
   - create
   - delete
@@ -39,7 +40,6 @@ rules:
   - cluster.open-cluster-management.io
   resources:
   - managedclusters
-  - managedclustersetbindings
   verbs:
   - get
   - list
@@ -48,9 +48,26 @@ rules:
 - apiGroups:
   - cluster.open-cluster-management.io
   resources:
+  - managedclustersetbindings
+  - managedclustersets
+  - managedclustersets/bind
+  - managedclustersets/finalizers
+  - managedclustersets/join
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cluster.open-cluster-management.io
+  resources:
   - placementdecisions
   - placements
   verbs:
+  - create
   - delete
   - get
   - list
@@ -87,6 +104,7 @@ rules:
   resources:
   - placementbindings
   verbs:
+  - create
   - delete
   - get
   - list
@@ -108,6 +126,7 @@ rules:
   resources:
   - manifestworks
   verbs:
+  - create
   - delete
   - get
   - list

@@ -5,7 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: controller
     app.kubernetes.io/managed-by: kustomize
-  name: federatedlearning-viewer-role
+  name: viewer-role
 rules:
 - apiGroups:
   - federation-ai.open-cluster-management.io

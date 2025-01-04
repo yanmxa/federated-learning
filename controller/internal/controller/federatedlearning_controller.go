@@ -116,28 +116,16 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 
-		requeue, err := r.updateServerAddress(ctx, instance)
-		if err != nil {
-			log.Error(err, "failed to update the server address")
-			return ctrl.Result{}, err
-		}
-		if requeue {
-			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-		}
-
 		// 2. client: placement(based on selected cluster -> InProcess), InProcess -> generate manifestwork
-		requeue, err = r.federatedLearningClient(ctx, instance)
-		if err != nil {
+		if err := r.federatedLearningClient(ctx, instance); err != nil {
 			log.Error(err, "failed to update the client status")
 			return ctrl.Result{}, err
-		}
-		if requeue {
-			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 	}
 
 	// InProcess -> Completed
-	if instance.Status.Phase == flv1alpha1.PhaseInProcess || instance.Status.Phase == flv1alpha1.PhaseCompleted {
+	if instance.Status.Phase == flv1alpha1.PhaseInProcess ||
+		instance.Status.Phase == flv1alpha1.PhaseCompleted {
 		job := &batchv1.Job{}
 		err = r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: instance.Name}, job)
 		if err != nil {
@@ -161,6 +149,11 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 				return ctrl.Result{}, err
 			}
 		}
+	}
+
+	// requeue if the phase is InProcess or Pending
+	if instance.Status.Phase == flv1alpha1.PhaseInProcess || instance.Status.Phase == flv1alpha1.PhasePending {
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	return ctrl.Result{}, nil

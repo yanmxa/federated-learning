@@ -1,8 +1,6 @@
-cat <<EOF | oc apply -f -
 apiVersion: cluster.open-cluster-management.io/v1alpha1
 kind: ClusterClaim
 metadata:
   name: federated-learning-sample.client-data
 spec:
-  value: data-partition-1
-EOF
+  value: data-partition-0

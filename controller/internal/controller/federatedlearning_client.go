@@ -23,28 +23,28 @@ import (
 
 var clusterclientset *clusterclient.Clientset
 
-// +kubebuilder:rbac:groups=policy.open-cluster-management.io,resources=placementbindings,verbs=get;update;watch;list;delete
-// +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=placementdecisions,verbs=get;update;watch;list;delete
-// +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=placements,verbs=get;update;watch;list;delete
-// +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=managedclustersetbindings,verbs=get;update;watch;list
+// +kubebuilder:rbac:groups=policy.open-cluster-management.io,resources=placementbindings,verbs=get;update;watch;list;delete;create
+// +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=placementdecisions,verbs=get;update;watch;list;delete;create
+// +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=placements,verbs=get;update;watch;list;delete;create
 // +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=managedclusters,verbs=get;update;watch;list
-// +kubebuilder:rbac:groups=work.open-cluster-management.io,resources=manifestworks,verbs=get;list;watch;update;delete
+// +kubebuilder:rbac:groups=work.open-cluster-management.io,resources=manifestworks,verbs=get;list;watch;update;delete;create
+// +kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=managedclustersetbindings;managedclustersets;managedclustersets/bind;managedclustersets/finalizers;managedclustersets/join,verbs=create;get;list;patch;update;watch;delete
 
 func (r *FederatedLearningReconciler) federatedLearningClient(ctx context.Context,
 	instance *flv1alpha1.FederatedLearning,
-) (requeue bool, err error) {
+) (err error) {
 	// delete the placement and manifestwork of it
 	if instance.DeletionTimestamp != nil {
 		if err = r.pruneResources(ctx, instance); err != nil {
-			return false, err
+			return err
 		}
-		return false, nil
+		return nil
 	}
 
 	// generate placement
 	err = r.deployPlacement(ctx, instance)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	placement := &clusterv1beta1.Placement{
@@ -53,26 +53,20 @@ func (r *FederatedLearningReconciler) federatedLearningClient(ctx context.Contex
 		},
 	}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(placement), placement); err != nil {
-		return false, err
+		return err
 	}
 
-	// requeue if pending status
-	requeue, err = r.toInProcess(ctx, instance, placement)
-	if err != nil {
+	if err = r.toInProcess(ctx, instance, placement); err != nil {
 		log.Error(err)
-		return false, err
-	}
-	if requeue {
-		return true, nil
+		return err
 	}
 
 	// generate manifestwork for the selected cluster
 	err = r.generateWorkload(ctx, instance, placement)
 	if err != nil {
-		return false, err
+		return err
 	}
-
-	return false, nil
+	return nil
 }
 
 // Determine dataKey based on the placement(and instance), and render the workload from the decisions
@@ -222,8 +216,8 @@ func (r *FederatedLearningReconciler) clusterWorkload(ctx context.Context, insta
 // 1. If selectedClusters < minimizeClients, then requeue and update pending message
 // 2. Else switch to InProcess
 func (r *FederatedLearningReconciler) toInProcess(ctx context.Context, instance *flv1alpha1.FederatedLearning,
-	placement *clusterv1beta1.Placement) (bool, error,
-) {
+	placement *clusterv1beta1.Placement,
+) error {
 	selectedClusters := placement.Status.NumberOfSelectedClusters
 	minimizeClients := instance.Spec.Server.MinAvailableClients
 	if selectedClusters < int32(minimizeClients) {
@@ -233,10 +227,10 @@ func (r *FederatedLearningReconciler) toInProcess(ctx context.Context, instance 
 			instance.Status.Message = message
 			if err := r.Client.Status().Update(ctx, instance); err != nil {
 				log.Error(err)
-				return false, err
+				return err
 			}
 		}
-		return true, nil
+		return nil
 	}
 
 	message := fmt.Sprintf(InProcessMessage, selectedClusters)
@@ -245,10 +239,10 @@ func (r *FederatedLearningReconciler) toInProcess(ctx context.Context, instance 
 		instance.Status.Phase = flv1alpha1.PhaseInProcess
 		instance.Status.Message = message
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
-			return false, err
+			return err
 		}
 	}
-	return false, nil
+	return nil
 }
 
 func (r *FederatedLearningReconciler) deployPlacement(ctx context.Context,

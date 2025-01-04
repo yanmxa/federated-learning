@@ -1,9 +1,7 @@
-cat <<EOF | oc apply -f -
 apiVersion: federation-ai.open-cluster-management.io/v1alpha1
 kind: FederatedLearning
 metadata:
   name: federated-learning-sample
-  namespace: multicluster-global-hub
 spec:
   framework: flower
   server:
@@ -30,4 +28,3 @@ spec:
               matchExpressions:
                 - key: federated-learning-sample.client-data
                   operator: Exists
-EOF

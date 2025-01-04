@@ -25,9 +25,10 @@ import (
 var previousAddress map[string]string = make(map[string]string)
 
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=create;delete;get;list;watch;update
-// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch
-// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;delete;create;update
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;delete;create;update
 // +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;delete;update;create
 
 func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Context, instance *flv1alpha1.FederatedLearning) error {
 	// don't delete the storage and cause the job's owner is instance
@@ -83,21 +84,25 @@ func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Contex
 		}
 	}
 
+	if err := r.updateServerAddress(ctx, instance); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // get the address by NodePort, LoadBalancer or Route
-func (r *FederatedLearningReconciler) updateServerAddress(ctx context.Context, instance *flv1alpha1.FederatedLearning) (bool, error) {
+func (r *FederatedLearningReconciler) updateServerAddress(ctx context.Context, instance *flv1alpha1.FederatedLearning) error {
 	log.Info("update the server address for the clients")
 	svc := corev1.Service{}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(instance), &svc); err != nil {
-		return false, err
+		return err
 	}
 	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 		log.Info("loadBalancer service found")
 		if len(svc.Status.LoadBalancer.Ingress) == 0 {
 			log.Info("loadBalancer service address is empty")
-			return true, nil
+			return nil
 		}
 		address := svc.Status.LoadBalancer.Ingress[0].Hostname + ":" + fmt.Sprintf("%d", svc.Spec.Ports[0].Port)
 
@@ -120,19 +125,19 @@ func (r *FederatedLearningReconciler) updateServerAddress(ctx context.Context, i
 			instance.Status.Listeners = newListeners
 			log.Infow("update the server address", "address", address)
 			if err := r.Status().Update(ctx, instance); err != nil {
-				return false, err
+				return err
 			}
 			previousAddress[string(flv1alpha1.LoadBalancer)] = address
-			return false, nil
+			return nil
 		} else if address == "" {
 			log.Info("LoadBalancer address is empty")
-			return true, nil
+			return nil
 		} else {
 			log.Info("LoadBalancer address is not changed")
 		}
-		return false, nil
+		return nil
 	}
-	return false, nil
+	return nil
 }
 
 func SetOwner(objects []*unstructured.Unstructured,

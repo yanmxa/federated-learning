@@ -2,44 +2,37 @@
 
 ![Controller Architecture](../asset/controller.png)
 
-This Kubernetes controller facilitates the startup and management of federated learning processes in an Open Cluster Management environment. The **Custom Resource Definition (CRD)** `FederatedLearning` represents a federated learning process that can adopt various frameworks, such as Flower, OpenFL, and others.
+This Kubernetes controller orchestrates the startup and management of federated learning processes in an Open Cluster Management environment. The `FederatedLearning` Custom Resource Definition (CRD) defines a federated learning process, supporting frameworks like Flower, OpenFL, and others.
 
 ---
 
 ## Description
 
-- The controller reconciles `FederatedLearning` instances and, based on their configuration, manages the creation of **server** and **client** instances to start the model training and aggregation process.
+
+The controller reconciles `FederatedLearning` instances, managing the lifecycle of **server** and **client** components that handle model training and aggregation:
 
   - **Server**:
-    - A Kubernetes job created using the built-in manifest template.
-    - It expects a server image capable of starting with:
-      ```bash
-      server --num-rounds <number-of-rounds>
-      ```
+
+    Creates a Kubernetes Job (using a built-in manifest template) expected to start with:
+
+    ```bash
+    server --num-rounds <number-of-rounds>
+    ```
 
   - **Client**:
-    - A Kubernetes job created using **ManifestWorks** from the hub cluster.
-    - It expects a client image capable of starting with:
-      ```bash
-      client --data-config <data-configuration> --server-address <aggregator-address>
-      ```
+    Creates a Kubernetes Job via ManifestWorks from the hub cluster, expected to start with:
+
+    ```bash
+    client --data-config <data-configuration> --server-address <aggregator-address>
+    ```
 
 ---
 
-This controller streamlines federated learning orchestration by leveraging Kubernetes-native resources to manage servers, clients, and the overall training process efficiently.
+This controller simplifies the orchestration of federated learning tasks by leveraging native Kubernetes resources to deploy servers, spawn clients, and coordinate their training processes.
 
 ## Getting Started
 
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
-
-```sh
-make docker-build docker-push IMG=<some-registry>/controller:tag
-```
-
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
+### Running Locally
 
 **Install the CRDs into the cluster:**
 
@@ -47,23 +40,87 @@ Make sure you have the proper permission to the registry if the above commands d
 make install
 ```
 
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
+**Run the controller locally:**
 
 ```sh
-make deploy IMG=<some-registry>/controller:tag
+make run
+```
+
+### To Deploy on the cluster
+
+**1. Build and push your image to the location specified by `IMG`:**
+```sh
+make docker-build docker-push IMG=<some-registry>/controller:tag
+# or
+make docker-build docker-push REGISTRY=<some-registry> 
+```
+**NOTE:** This image ought to be published in the personal registry you specified.
+And it is required to have access to pull the image from the working environment.
+Make sure you have the proper permission to the registry if the above commands don’t work.
+
+
+**2. Deploy the Controller to the cluster**
+
+```sh
+make deploy IMG=<some-registry>/controller:tag NAMESPACE=<namespace>
 ```
 
 > **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
 privileges or be logged in as admin.
 
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
+**3. Create a FederatedLearning instance**
 
 ```sh
-kubectl apply -k config/samples/
+cat <<EOF | oc apply -f -
+apiVersion: federation-ai.open-cluster-management.io/v1alpha1
+kind: FederatedLearning
+metadata:
+  name: federated-learning-sample
+spec:
+  framework: flower
+  server:
+    image: quay.io/myan/flower-app
+    rounds: 10
+    minAvailableClients: 2
+    listeners:
+      - name: server-listener
+        port: 8080
+        type: LoadBalancer
+    storage:
+      type: PersistentVolumeClaim
+      name: model-pvc
+      path: /data/models
+      size: 2Gi
+  client:
+    image: quay.io/myan/flower-app
+    placement:
+      clusterSets:
+        - global
+      predicates:
+        - requiredClusterSelector:
+            claimSelector:
+              matchExpressions:
+                - key: federated-learning-sample.client-data
+                  operator: Exists
+EOF
 ```
 
->**NOTE**: Ensure that the samples has default values to test it out.
+**4. Mark the data from the Managed clusters**
+
+```sh
+cat <<EOF | oc apply -f -
+apiVersion: cluster.open-cluster-management.io/v1alpha1
+kind: ClusterClaim
+metadata:
+  name: federated-learning-sample.client-data
+spec:
+  value: data-partition-0
+EOF
+```
+
+## Model Validation
+
+- Validate the model from the pvc by the guide in the [notebook](./notebook/deploy/README.md)
 
 ### To Uninstall
 **Delete the instances (CRs) from the cluster:**
@@ -116,7 +173,7 @@ More information can be found via the [Kubebuilder Documentation](https://book.k
 
 ## License
 
-Copyright 2024.
+Copyright 2025.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
