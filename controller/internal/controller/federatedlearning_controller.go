@@ -77,8 +77,22 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 	}()
 
+	// deleting the instance, clean up the resources with finalizer
+	if instance.DeletionTimestamp != nil {
+		if err := r.pruneClientResources(ctx, instance); err != nil {
+			return ctrl.Result{}, err
+		}
+		if containsString(instance.Finalizers, FederatedLearningFinalizer) {
+			instance.Finalizers = removeString(instance.Finalizers, FederatedLearningFinalizer)
+			if err = r.Update(ctx, instance); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{}, nil
+	}
+
 	// add finalizer
-	if instance.DeletionTimestamp == nil && !containsString(instance.Finalizers, FederatedLearningFinalizer) {
+	if !containsString(instance.Finalizers, FederatedLearningFinalizer) {
 		log.Info("FederatedLearning finalizer already exists")
 		instance.Finalizers = append(instance.Finalizers, FederatedLearningFinalizer)
 		if err = r.Update(ctx, instance); err != nil {
@@ -87,7 +101,7 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// Initialize status.phase to Pending if not set
-	if instance.DeletionTimestamp == nil && instance.Status.Phase == "" {
+	if instance.Status.Phase == "" {
 		instance.Status.Phase = flv1alpha1.PhasePending
 		instance.Status.Message = PendingInitMessage
 		if err := r.Status().Update(ctx, instance); err != nil {
@@ -95,12 +109,12 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 	}
 
-	if instance.DeletionTimestamp == nil &&
-		instance.Status.Phase == flv1alpha1.PhaseFailed {
+	if instance.Status.Phase == flv1alpha1.PhaseFailed {
 		log.Infof("FederatedLearning %s is %s", instance.Name, instance.Status.Phase)
 		return ctrl.Result{}, nil
 	}
 
+	// Start -> Pending
 	if instance.Status.Phase == flv1alpha1.PhaseStart {
 		instance.Status.Phase = flv1alpha1.PhasePending
 		err = r.Client.Status().Update(ctx, instance)
@@ -137,15 +151,6 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			instance.Status.Phase = flv1alpha1.PhaseCompleted
 			instance.Status.Message = message
 			if err = r.Status().Update(ctx, instance); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-	}
-
-	if instance.DeletionTimestamp != nil {
-		if containsString(instance.Finalizers, FederatedLearningFinalizer) {
-			instance.Finalizers = removeString(instance.Finalizers, FederatedLearningFinalizer)
-			if err = r.Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 		}

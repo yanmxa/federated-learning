@@ -57,7 +57,7 @@ To access the Jupyter Notebook:
 
 1. Forward the Jupyter Notebook port:
    ```bash
-   kubectl port-forward deployment/jupyter-notebook -n multicluster-global-hub 8888:8888
+   kubectl port-forward deployment/jupyter-notebook 8888:8888
    ```
 
 2. Open your browser and navigate to:

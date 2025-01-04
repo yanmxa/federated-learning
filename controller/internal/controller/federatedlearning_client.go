@@ -35,9 +35,6 @@ func (r *FederatedLearningReconciler) federatedLearningClient(ctx context.Contex
 ) (err error) {
 	// delete the placement and manifestwork of it
 	if instance.DeletionTimestamp != nil {
-		if err = r.pruneResources(ctx, instance); err != nil {
-			return err
-		}
 		return nil
 	}
 
@@ -128,7 +125,7 @@ func (r *FederatedLearningReconciler) generateWorkload(ctx context.Context, inst
 	return nil
 }
 
-func (r *FederatedLearningReconciler) pruneResources(ctx context.Context, instance *flv1alpha1.FederatedLearning,
+func (r *FederatedLearningReconciler) pruneClientResources(ctx context.Context, instance *flv1alpha1.FederatedLearning,
 ) (err error) {
 	placement := &clusterv1beta1.Placement{
 		ObjectMeta: metav1.ObjectMeta{
