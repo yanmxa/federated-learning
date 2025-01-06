@@ -52,7 +52,6 @@ type FederatedLearningReconciler struct {
 // +kubebuilder:rbac:groups=federation-ai.open-cluster-management.io,resources=federatedlearnings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=federation-ai.open-cluster-management.io,resources=federatedlearnings/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=federation-ai.open-cluster-management.io,resources=federatedlearnings/finalizers,verbs=update
-// +kubebuilder:rbac:groups="route.openshift.io",resources=routes,verbs=get;list;watch;create;update;delete
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;delete
 
 // For more details, check Reconcile and its Result here:

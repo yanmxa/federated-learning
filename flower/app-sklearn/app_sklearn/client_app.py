@@ -84,6 +84,7 @@ partition_id = str(args.data_config).split("-")[-1]
 partition_id = int(partition_id)
 
 print(f"choose the dataset: {partition_id}")
+print(f"address: {args.server_address}")
 
 fl.client.start_client(
   server_address=args.server_address, 

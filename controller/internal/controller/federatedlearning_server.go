@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -29,6 +30,7 @@ var previousAddress map[string]string = make(map[string]string)
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;delete;create;update
 // +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;delete;update;create
+// +kubebuilder:rbac:groups="route.openshift.io",resources=routes,verbs=get;list;watch;create;update;delete
 
 func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Context, instance *flv1alpha1.FederatedLearning) error {
 	// don't delete the storage and cause the job's owner is instance
@@ -43,6 +45,8 @@ func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Contex
 		return fmt.Errorf("no listeners specified")
 	}
 
+	// instance.Spec.Server.Listeners[0].Type != flv1alpha1.Route
+	// route is http based -> requires to handle the transport: https://flower.ai/docs/framework/ref-api/flwr.client.start_client.html
 	if instance.Spec.Server.Listeners[0].Type != flv1alpha1.LoadBalancer &&
 		instance.Spec.Server.Listeners[0].Type != flv1alpha1.NodePort {
 		return fmt.Errorf("unsupported listener type: %s", instance.Spec.Server.Listeners[0].Type)
@@ -94,48 +98,96 @@ func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Contex
 // get the address by NodePort, LoadBalancer or Route
 func (r *FederatedLearningReconciler) updateServerAddress(ctx context.Context, instance *flv1alpha1.FederatedLearning) error {
 	log.Info("update the server address for the clients")
-	svc := corev1.Service{}
-	if err := r.Get(ctx, client.ObjectKeyFromObject(instance), &svc); err != nil {
+	svc := &corev1.Service{}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(instance), svc); err != nil {
 		return err
 	}
 	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
-		log.Info("loadBalancer service found")
-		if len(svc.Status.LoadBalancer.Ingress) == 0 {
-			log.Info("loadBalancer service address is empty")
-			return nil
-		}
-		address := svc.Status.LoadBalancer.Ingress[0].Hostname + ":" + fmt.Sprintf("%d", svc.Spec.Ports[0].Port)
+		return r.updateLB(ctx, svc, instance)
+	}
+	// if svc.Spec.Type == corev1.ServiceTypeClusterIP {
+	// 	return r.updateRoute(ctx, svc, instance)
+	// }
+	return fmt.Errorf("failed to update the service address")
+}
 
-		if address != "" && address != previousAddress[string(flv1alpha1.LoadBalancer)] {
-			newListeners := make([]flv1alpha1.ListenerStatus, 0)
-			for _, listener := range instance.Status.Listeners {
-				if listener.Type == flv1alpha1.LoadBalancer {
-					continue
-				} else {
-					newListeners = append(newListeners, listener)
-				}
-			}
-			newListeners = append(newListeners, flv1alpha1.ListenerStatus{
-				Name:    fmt.Sprintf("listener(service):%s", svc.Name),
-				Type:    flv1alpha1.LoadBalancer,
-				Address: address,
-				// Port:    svc.Status.LoadBalancer.Ingress[0].Port,
-			})
+func (r *FederatedLearningReconciler) updateRoute(ctx context.Context, svc *corev1.Service, instance *flv1alpha1.FederatedLearning) error {
+	log.Info("route service found")
+	route := &routev1.Route{}
 
-			instance.Status.Listeners = newListeners
-			log.Infow("update the server address", "address", address)
-			if err := r.Status().Update(ctx, instance); err != nil {
-				return err
+	err := r.Get(ctx, client.ObjectKeyFromObject(instance), route)
+	if err != nil {
+		return err
+	}
+
+	if len(route.Spec.Host) == 0 {
+		return fmt.Errorf("Route host is not ready: %s/%s", route.Namespace, route.Name)
+	}
+
+	address := route.Spec.Host
+
+	if address != "" && address != previousAddress[string(flv1alpha1.Route)] {
+		newListeners := make([]flv1alpha1.ListenerStatus, 0)
+		for _, listener := range instance.Status.Listeners {
+			if listener.Type == flv1alpha1.Route {
+				continue
+			} else {
+				newListeners = append(newListeners, listener)
 			}
-			previousAddress[string(flv1alpha1.LoadBalancer)] = address
-			return nil
-		} else if address == "" {
-			log.Info("LoadBalancer address is empty")
-			return nil
-		} else {
-			log.Info("LoadBalancer address is not changed")
 		}
+		newListeners = append(newListeners, flv1alpha1.ListenerStatus{
+			Name:    fmt.Sprintf("listener(route):%s", route.Name),
+			Type:    flv1alpha1.Route,
+			Address: address,
+			// Port:    svc.Status.LoadBalancer.Ingress[0].Port,
+		})
+
+		instance.Status.Listeners = newListeners
+		log.Infow("update the server address", "address", address)
+		if err := r.Status().Update(ctx, instance); err != nil {
+			return err
+		}
+		previousAddress[string(flv1alpha1.Route)] = address
+	} else {
+		log.Info("route address is not changed")
+	}
+	return nil
+}
+
+func (r *FederatedLearningReconciler) updateLB(ctx context.Context, svc *corev1.Service, instance *flv1alpha1.FederatedLearning) error {
+	log.Info("loadBalancer service found")
+	if len(svc.Status.LoadBalancer.Ingress) == 0 {
+		log.Info("loadBalancer service address is empty")
 		return nil
+	}
+	address := svc.Status.LoadBalancer.Ingress[0].Hostname + ":" + fmt.Sprintf("%d", svc.Spec.Ports[0].Port)
+
+	if address != "" && address != previousAddress[string(flv1alpha1.LoadBalancer)] {
+		newListeners := make([]flv1alpha1.ListenerStatus, 0)
+		for _, listener := range instance.Status.Listeners {
+			if listener.Type == flv1alpha1.LoadBalancer {
+				continue
+			} else {
+				newListeners = append(newListeners, listener)
+			}
+		}
+		newListeners = append(newListeners, flv1alpha1.ListenerStatus{
+			Name:    fmt.Sprintf("listener(service):%s", svc.Name),
+			Type:    flv1alpha1.LoadBalancer,
+			Address: address,
+			// Port:    svc.Status.LoadBalancer.Ingress[0].Port,
+		})
+
+		instance.Status.Listeners = newListeners
+		log.Infow("update the server address", "address", address)
+		if err := r.Status().Update(ctx, instance); err != nil {
+			return err
+		}
+		previousAddress[string(flv1alpha1.LoadBalancer)] = address
+	} else if address == "" {
+		log.Info("LoadBalancer address is empty")
+	} else {
+		log.Info("LoadBalancer address is not changed")
 	}
 	return nil
 }
