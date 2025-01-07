@@ -86,19 +86,36 @@ partition_id = int(partition_id)
 print(f"choose the dataset: {partition_id}")
 print(f"address: {args.server_address}")
 
-fl.client.start_client(
-  server_address=args.server_address, 
-  client=client_fn(context=Context(
-    run_id = "",
-    node_id = "",
-    state = None,
-    node_config={
-      "partition-id": partition_id,
-      "num-partitions": 2
-    },
-    run_config = {
-      "penalty": "l2", 
-      "local-epochs": 3,
-    },
-    )),
-  )
+import time
+
+MAX_RETRIES = 6
+RETRY_DELAY = 10  # seconds
+
+for attempt in range(MAX_RETRIES):
+    try:
+        fl.client.start_client(
+            server_address=args.server_address,
+            client=client_fn(context=Context(
+                run_id="",
+                node_id="",
+                state=None,
+                node_config={
+                    "partition-id": partition_id,
+                    "num-partitions": 2
+                },
+                run_config={
+                    "penalty": "l2",
+                    "local-epochs": 3,
+                },
+            )),
+        )
+        print("Client started successfully.")
+        break  # Exit the loop if successful
+    except Exception as e:
+        print(f"Attempt {attempt + 1} failed with error: {e}")
+        if attempt < MAX_RETRIES - 1:  # If not the last attempt, wait before retrying
+            print(f"Retrying in {RETRY_DELAY} seconds...")
+            time.sleep(RETRY_DELAY)
+        else:
+            print("Max retries reached. Exiting.")
+            raise e  # Re-raise the exception after the last attempt
