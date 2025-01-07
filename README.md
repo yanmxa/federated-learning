@@ -78,17 +78,18 @@ The following step 1 to 5 are what we call a single round of FL.
 
 ## Thinking...
 
-- Running the collaborators in edge devices?
 - Deploying the federated learning in a multi-clusters environment?
 
   - Use the [Open Cluster Management](https://open-cluster-management.io/) to manage the FL process
 
-  - Distribute global model to the spoken cluster by hub control-plane
+  - Distribute the model to the spoke cluster by the hub control-plane
 
-  - Aggregate the local models from spoken clusters into the global model
+  - Running the collaborators on the spoke clusters, and aggregator on the hub cluster
 
-  - Running the collaborators on the spoken clusters
+  - Aggregate the local models from spoke clusters into the global model
 
+
+- Running the collaborators in edge devices?
 ... ...
 
 ## Reference
