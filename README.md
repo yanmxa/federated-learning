@@ -88,6 +88,7 @@ The following step 1 to 5 are what we call a single round of FL.
 
   - Aggregate the local models from spoke clusters into the global model
 
+  > Introducing the Prototype: [Federated Learning Controller for Open Cluster Management](./controller/README.md)
 
 - Running the collaborators in edge devices?
 ... ...
