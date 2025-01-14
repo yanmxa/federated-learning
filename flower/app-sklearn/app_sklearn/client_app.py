@@ -14,7 +14,6 @@ from app_sklearn.task import (
     set_model_params,
 )
 
-
 class FlowerClient(NumPyClient):
     def __init__(self, model, X_train, X_test, y_train, y_test):
         self.model = model

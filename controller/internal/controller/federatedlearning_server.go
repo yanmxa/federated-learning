@@ -23,8 +23,6 @@ import (
 	"github/open-cluster-management/federated-learning/internal/controller/manifests/applier"
 )
 
-var previousAddress map[string]string = make(map[string]string)
-
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=create;delete;get;list;watch;update
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;delete;create;update
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;delete;create;update
@@ -126,7 +124,7 @@ func (r *FederatedLearningReconciler) updateRoute(ctx context.Context, svc *core
 
 	address := route.Spec.Host
 
-	if address != "" && address != previousAddress[string(flv1alpha1.Route)] {
+	if address != "" {
 		newListeners := make([]flv1alpha1.ListenerStatus, 0)
 		for _, listener := range instance.Status.Listeners {
 			if listener.Type == flv1alpha1.Route {
@@ -147,7 +145,6 @@ func (r *FederatedLearningReconciler) updateRoute(ctx context.Context, svc *core
 		if err := r.Status().Update(ctx, instance); err != nil {
 			return err
 		}
-		previousAddress[string(flv1alpha1.Route)] = address
 	} else {
 		log.Info("route address is not changed")
 	}
@@ -162,7 +159,7 @@ func (r *FederatedLearningReconciler) updateLB(ctx context.Context, svc *corev1.
 	}
 	address := svc.Status.LoadBalancer.Ingress[0].Hostname + ":" + fmt.Sprintf("%d", svc.Spec.Ports[0].Port)
 
-	if address != "" && address != previousAddress[string(flv1alpha1.LoadBalancer)] {
+	if address != "" {
 		newListeners := make([]flv1alpha1.ListenerStatus, 0)
 		for _, listener := range instance.Status.Listeners {
 			if listener.Type == flv1alpha1.LoadBalancer {
@@ -183,7 +180,6 @@ func (r *FederatedLearningReconciler) updateLB(ctx context.Context, svc *corev1.
 		if err := r.Status().Update(ctx, instance); err != nil {
 			return err
 		}
-		previousAddress[string(flv1alpha1.LoadBalancer)] = address
 	} else if address == "" {
 		log.Info("LoadBalancer address is empty")
 	} else {
