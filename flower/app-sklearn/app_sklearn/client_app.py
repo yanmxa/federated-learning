@@ -77,20 +77,20 @@ parser.add_argument(
 parser.add_argument(
     "--server-address", type=str, default="127.0.0.1:8080", help="Server Address"
 )
-args = parser.parse_args()
-
-partition_id = str(args.data_config)
-
-print(f"choose the dataset: {partition_id}")
-print(f"address: {args.server_address}")
 
 import time
 
-MAX_RETRIES = 6
+MAX_RETRIES = 60
 RETRY_DELAY = 10  # seconds
 
 for attempt in range(MAX_RETRIES):
     try:
+        args = parser.parse_args()
+        partition_id = str(args.data_config)
+
+        print(f"choose the dataset: {partition_id}")
+        print(f"address: {args.server_address}")
+
         fl.client.start_client(
             server_address=args.server_address,
             client=client_fn(context=Context(

@@ -37,11 +37,15 @@ def load_data(data_path: str):
     # Split the filtered data into 90% train and 10% test
     X_train, X_test = X_filtered[: int(0.9 * len(X_filtered))], X_filtered[int(0.1 * len(X_filtered)) :]
     y_train, y_test = y_filtered[: int(0.9 * len(y_filtered))], y_filtered[int(0.1 * len(y_filtered)) :]
+    
+    # Keep the test data intact (no partitioning)
+    X_test_all = X[int(0.8 * len(X)) :]  # Full test data
+    y_test_all = y[int(0.8 * len(y)) :]  # Full test data labels
 
     # # Split the on edge data: 80% train, 20% test
     # X_train, X_test = X[: int(0.8 * len(X))], X[int(0.8 * len(X)) :]
     # y_train, y_test = y[: int(0.8 * len(y))], y[int(0.8 * len(y)) :]
-    return X_train, X_test, y_train, y_test
+    return X_train, X_test_all, y_train, y_test_all
 
 
 def get_model(penalty: str, local_epochs: int):

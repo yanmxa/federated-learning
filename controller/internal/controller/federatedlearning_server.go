@@ -198,6 +198,10 @@ func SetOwner(objects []*unstructured.Unstructured,
 ) error {
 	// manipulate the object
 	for _, obj := range objects {
+		// don't add the svc for now
+		if obj.GroupVersionKind().GroupKind().Kind == "Service" {
+			continue
+		}
 		mapping, err := mapper.RESTMapping(obj.GroupVersionKind().GroupKind(), obj.GroupVersionKind().Version)
 		if err != nil {
 			return err
