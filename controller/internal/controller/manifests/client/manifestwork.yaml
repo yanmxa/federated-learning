@@ -12,6 +12,13 @@ spec:
         name: {{ .ClientJobName }}
       updateStrategy:
         type: ServerSideApply
+  deleteOption:
+    propagationPolicy: SelectivelyOrphan
+    selectivelyOrphans:
+      orphaningRules:
+      - group: ""
+        resource: namespaces
+        name: {{ .ClientJobNamespace }}
   workload:
     manifests:
       - kind: Namespace

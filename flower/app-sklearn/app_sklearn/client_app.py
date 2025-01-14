@@ -44,9 +44,9 @@ class FlowerClient(NumPyClient):
 
 def client_fn(context: Context):
     partition_id = context.node_config["partition-id"]
-    num_partitions = context.node_config["num-partitions"]
+    # num_partitions = context.node_config["num-partitions"]
 
-    X_train, X_test, y_train, y_test = load_data(partition_id, num_partitions)
+    X_train, X_test, y_train, y_test = load_data(partition_id)
 
     # Create LogisticRegression Model
     penalty = context.run_config["penalty"]
@@ -66,7 +66,6 @@ def client_fn(context: Context):
 import flwr as fl 
 import argparse
 
-
 # Get partition id
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument(
@@ -80,8 +79,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-partition_id = str(args.data_config).split("-")[-1]
-partition_id = int(partition_id)
+partition_id = str(args.data_config)
 
 print(f"choose the dataset: {partition_id}")
 print(f"address: {args.server_address}")

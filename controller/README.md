@@ -114,7 +114,7 @@ kind: ClusterClaim
 metadata:
   name: federated-learning-sample.client-data
 spec:
-  value: data-partition-0
+  value: /data/private/cluster1
 EOF
 ```
 

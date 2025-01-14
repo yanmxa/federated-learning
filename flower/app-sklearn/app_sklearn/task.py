@@ -7,26 +7,40 @@ from sklearn.linear_model import LogisticRegression
 
 fds = None  # Cache FederatedDataset
 
-
-def load_data(partition_id: int, num_partitions: int):
+def load_data(data_path: str):
     """Load partition MNIST data."""
     # Only initialize `FederatedDataset` once
     global fds
     if fds is None:
-        partitioner = IidPartitioner(num_partitions=num_partitions)
+        partitioner = IidPartitioner(num_partitions=1)
         fds = FederatedDataset(
             dataset="mnist",
             partitioners={"train": partitioner},
         )
 
-    dataset = fds.load_partition(partition_id, "train").with_format("numpy")
+    dataset = fds.load_partition(0, "train").with_format("numpy")
 
     X, y = dataset["image"].reshape((len(dataset), -1)), dataset["label"]
+    
+     # Define partition labels
+    if "cluster1" in data_path:
+        labels_to_include = [0, 1, 2, 3, 4]
+    elif "cluster2" in data_path:
+        labels_to_include = [5, 6, 7, 8, 9]
+    else:
+        raise ValueError(f"Invalid data_path {data_path}. Should be 'cluster1' or 'cluster2'.")
+      
 
-    # Split the on edge data: 80% train, 20% test
-    X_train, X_test = X[: int(0.8 * len(X))], X[int(0.8 * len(X)) :]
-    y_train, y_test = y[: int(0.8 * len(y))], y[int(0.8 * len(y)) :]
+    X_filtered = X[np.isin(y, labels_to_include)]
+    y_filtered = y[np.isin(y, labels_to_include)]
+    
+    # Split the filtered data into 90% train and 10% test
+    X_train, X_test = X_filtered[: int(0.9 * len(X_filtered))], X_filtered[int(0.1 * len(X_filtered)) :]
+    y_train, y_test = y_filtered[: int(0.9 * len(y_filtered))], y_filtered[int(0.1 * len(y_filtered)) :]
 
+    # # Split the on edge data: 80% train, 20% test
+    # X_train, X_test = X[: int(0.8 * len(X))], X[int(0.8 * len(X)) :]
+    # y_train, y_test = y[: int(0.8 * len(y))], y[int(0.8 * len(y)) :]
     return X_train, X_test, y_train, y_test
 
 

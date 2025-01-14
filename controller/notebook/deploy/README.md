@@ -49,9 +49,26 @@ spec:
 EOF
 ```
 
+Optional
+```bash
+cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi  
+  storageClassName: gp3-csi  
+EOF
+```
+
 ---
 
-## Accessing the Jupyter Notebook
+## Accessing the Jupyter Notebook Locally
 
 To access the Jupyter Notebook:
 
@@ -64,6 +81,45 @@ To access the Jupyter Notebook:
    ```
    http://localhost:8888
    ```
+
+## Accessing the Jupyter Notebook by Route
+
+```bash
+cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: Route
+metadata:
+  name: jupyter-notebook
+  labels:
+    app: jupyter-notebook
+spec:
+  to:
+    kind: Service
+    name: jupyter-notebook
+    weight: 100
+  port:
+    targetPort: "8888-tcp"
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jupyter-notebook
+  labels:
+    app: jupyter-notebook
+spec:
+  ports:
+  - name: "8888-tcp"
+    protocol: TCP
+    port: 8888
+    targetPort: 8888
+  selector:
+    app: jupyter-notebook
+  type: ClusterIP
+EOF
+```
 
 ---
 
