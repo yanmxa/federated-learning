@@ -114,7 +114,7 @@ func (r *FederatedLearningReconciler) generateWorkload(ctx context.Context, inst
 			}
 
 		}
-		message := fmt.Sprintf("applied %d manifests to the clusters", count)
+		message := fmt.Sprintf("applied %d manifestworks to the clusters", count)
 		if instance.Status.Phase == flv1alpha1.PhaseInProcess && instance.Status.Message != message {
 			instance.Status.Message = message
 			if err := r.Status().Update(ctx, instance); err != nil {
@@ -181,9 +181,9 @@ func (r *FederatedLearningReconciler) clusterWorkload(ctx context.Context, insta
 	for _, listener := range instance.Status.Listeners {
 		serverAddress = listener.Address
 	}
-	// if serverAddress == "" {
-	// 	return fmt.Errorf("wait the server address to be ready!")
-	// }
+	if serverAddress == "" {
+		return fmt.Errorf("wait the server address to be ready!")
+	}
 
 	clientParams := &manifests.FederatedLearningClientParams{
 		ManifestName:       instance.Name,
