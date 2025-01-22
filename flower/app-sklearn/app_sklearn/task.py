@@ -24,12 +24,9 @@ def load_data(data_path: str):
     
     
     # Define partition labels
-    y_value = 0
     if "cluster1" in data_path:
-        y_value = 9
         labels_to_include = [0, 1, 2, 3, 4]
     elif "cluster2" in data_path:
-        y_value = 0
         labels_to_include = [5, 6, 7, 8, 9]
     else:
         raise ValueError(f"Invalid data_path {data_path}. Should be 'cluster1' or 'cluster2'.")
@@ -43,8 +40,11 @@ def load_data(data_path: str):
     print(X.shape, y.shape)
     
     # Split the on edge data: 80% train, 20% test
-    X_train, X_test = X[: 25000], X[-6000 :]
-    y_train, y_test = y[: 25000], y[-6000 :]
+    # X_train, X_test = X[: 25000], X[-6000 :]
+    # y_train, y_test = y[: 25000], y[-6000 :]
+    
+    X_train, X_test = X[: int(0.9 * len(X))], X[int(9 * len(X)) :]
+    y_train, y_test = y[: int(0.9 * len(y))], y[int(9 * len(y)) :]
     
     print("train shape:")
     print(X_train.shape, y_train.shape)
@@ -52,8 +52,7 @@ def load_data(data_path: str):
     print(y_train)
 
     # # Split the on edge data: 80% train, 20% test
-    # X_train, X_test = X[: int(0.8 * len(X))], X[int(0.8 * len(X)) :]
-    # y_train, y_test = y[: int(0.8 * len(y))], y[int(0.8 * len(y)) :]
+   
 
     return X_train, X_test, y_train, y_test
 
