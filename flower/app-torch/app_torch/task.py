@@ -42,7 +42,7 @@ from torch.utils.data import DataLoader, Subset
 
 
 def load_data(partition_id: int, num_partitions: int):
-    """Load partition CIFAR10 data."""
+    """Load partition MNIST data."""
     # Only initialize `FederatedDataset` once
     global fds
     if fds is None:
