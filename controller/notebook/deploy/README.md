@@ -61,7 +61,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 5Gi  
+      storage: 10Gi  
   storageClassName: gp3-csi  
 EOF
 ```

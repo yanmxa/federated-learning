@@ -76,7 +76,7 @@ The following step 1 to 5 are what we call a single round of FL.
 
 **OpenFL** offers built-in secure communication between the Aggregator and Collaborators. It provides detailed user control, such as creating a Federation Plan. I personally appreciate the [Task API](https://openfl.readthedocs.io/en/latest/about/features_index/taskrunner.html), which gives users flexibility in controlling which tasks are sent to collaborators.
 
-## Thinking...
+## Intuitive...
 
 - Deploying the federated learning in a multi-clusters environment?
 
