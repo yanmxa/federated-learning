@@ -51,9 +51,6 @@ import flwr as fl
 
 parser = argparse.ArgumentParser(description="Start FL server.")
 parser.add_argument(
-    "--server-address", type=str, default="0.0.0.0:8080", help="Address of the server."
-)
-parser.add_argument(
     "--num-rounds", type=int, default=10, help="Number of training rounds."
 )
 parser.add_argument(
@@ -86,7 +83,7 @@ def start_server():
     # /data/models/2024-01-02-00-00-00.*
     last_model_file = get_latest_model_file(args.model_dir)
     if last_model_file is None:
-        save_model(model, os.path.join(args.model_dir, "init.pkl"))
+        save_model(model, os.path.join(args.model_dir, "model_init.pth"))
     else:
         print("Loading model from", last_model_file)
         model = load_model(model, last_model_file)
