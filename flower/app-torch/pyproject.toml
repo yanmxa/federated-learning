@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "cirfar10-torch"
+name = "app-torch"
 version = "1.0.0"
 description = ""
 license = "Apache-2.0"
 dependencies = [
     "flwr[simulation]>=1.13.0",
     "flwr-datasets[vision]>=0.3.0",
-    "torch==2.2.1",
+    "torch==2.5.0",
     "torchvision==0.20.0",
 ]
 
