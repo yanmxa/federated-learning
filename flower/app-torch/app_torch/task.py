@@ -47,11 +47,11 @@ def exclude_digits(dataset, excluded_digits):
     return torch.utils.data.Subset(dataset, including_indices)
   
 def load_data(cluster_id):
-    # mock cluster id 
-    if cluster_id == 0:
-      cluster_id = "cluster1"
-    else:
-      cluster_id = "cluster2"
+    # # mock cluster id 
+    # if cluster_id == 0:
+    #   cluster_id = "cluster1"
+    # else:
+    #   cluster_id = "cluster2"
       
     transform=torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
@@ -61,7 +61,7 @@ def load_data(cluster_id):
     test_dataset = torchvision.datasets.MNIST('./data', train=False, download=True, transform=transform)
     
     digits = [0, 1, 2, 3, 4]
-    if  "cluster1" not in cluster_id:
+    if  "cluster2" in cluster_id:
       digits = [5, 6, 7, 8, 9]
       
     print(f"The train dataset is {digits}")

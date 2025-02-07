@@ -51,6 +51,9 @@ import flwr as fl
 
 parser = argparse.ArgumentParser(description="Start FL server.")
 parser.add_argument(
+        "--server-address", type=str, default="0.0.0.0:8080", help="Address of the server."
+    )
+parser.add_argument(
     "--num-rounds", type=int, default=10, help="Number of training rounds."
 )
 parser.add_argument(

@@ -13,34 +13,19 @@ ENV PYTHONUNBUFFERED=1 \
 # Set the working directory
 WORKDIR /app
 
-# # Install system dependencies for building Python packages
-# RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev build-base
-
-# Copy only necessary project files
-COPY pyproject.toml /app/
-
-# Install Python dependencies from pyproject.toml using pip
-RUN pip install -e .
-
-# # Remove build dependencies to reduce image size
-# RUN apk del gcc musl-dev libffi-dev openssl-dev build-base
-
-# Copy the rest of the application files
+# Copy only necessary files (excluding pyproject.toml to defer dependency installation)
 COPY . /app
 
 # Ensure the cache directories have the correct permissions
-RUN mkdir -p /app/.cache && \
-  chmod -R 777 /app/.cache
+RUN chown -R root:root /app && chmod -R 777 /app
+
 
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app
 
+# Ensure the entrypoint script is executable
 RUN chmod +x /app/entrypoint.sh
 
-# Set the default entrypoint to Python
-# docker run --rm -v /home/myan/workspace/federated-learning:/data/model quay.io/myan/flower-app server --num-rounds 20 --min-available-clients 2
-# docker run --rm -e quay.io/myan/flower-app client --data-config "data-partition-1" --server-address 172.17.0.2:8080
+# Install dependencies at runtime
+# ENTRYPOINT ["sh", "-c", "pip install -e . && /app/entrypoint.sh"]
 ENTRYPOINT ["/app/entrypoint.sh"]
-
-
-

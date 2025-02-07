@@ -51,12 +51,12 @@ class FlowerClient(NumPyClient):
 def client_fn(context: Context):
     # Load model and data
     net = Net()
-    # cluster_id = context.node_config["cluster-data-config"]
-    cluster_id = context.node_config["partition-id"]
+    cluster_config = context.node_config["cluster-data-config"]
+    # cluster_id = context.node_config["partition-id"]
     local_epochs = context.run_config["local-epochs"]
 
-    trainloader, valloader = load_data(cluster_id)
-    print(f"Cluster {cluster_id} -> epochs: {local_epochs}")
+    trainloader, valloader = load_data(cluster_config)
+    print(f"Cluster {cluster_config} -> epochs: {local_epochs}")
     # Return Client instance
     return FlowerClient(net, trainloader, valloader, local_epochs).to_client()
 
