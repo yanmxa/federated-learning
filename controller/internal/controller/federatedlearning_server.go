@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/restmapper"
@@ -101,7 +102,10 @@ func getSeverName(instanceName string) string {
 func (r *FederatedLearningReconciler) updateServerAddress(ctx context.Context, instance *flv1alpha1.FederatedLearning) error {
 	log.Info("update the server address for the clients")
 	svc := &corev1.Service{}
-	if err := r.Get(ctx, client.ObjectKeyFromObject(instance), svc); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      getSeverName(instance.Name),
+	}, svc); err != nil {
 		return err
 	}
 	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
