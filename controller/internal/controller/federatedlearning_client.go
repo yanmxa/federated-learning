@@ -189,7 +189,7 @@ func (r *FederatedLearningReconciler) clusterWorkload(ctx context.Context, insta
 		ManifestName:       instance.Name,
 		ManifestNamespace:  clusterName,
 		ClientJobNamespace: instance.Namespace,
-		ClientJobName:      instance.Name,
+		ClientJobName:      fmt.Sprintf("%s-client", instance.Name),
 		ClientJobImage:     instance.Spec.Client.Image,
 		ClientDataConfig:   dataConfig,
 		ServerAddress:      serverAddress,

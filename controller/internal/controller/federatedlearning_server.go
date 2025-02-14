@@ -54,7 +54,7 @@ func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Contex
 	unstructuredObjects, err := render.Render("server", "", func(profile string) (interface{}, error) {
 		return manifests.FederatedLearningServerParams{
 			Namespace:           instance.Namespace,
-			Name:                instance.Name,
+			Name:                fmt.Sprintf("%s-server", instance.Name),
 			Image:               instance.Spec.Server.Image,
 			NumberOfRounds:      instance.Spec.Server.Rounds,
 			MinAvailableClients: instance.Spec.Server.MinAvailableClients,
