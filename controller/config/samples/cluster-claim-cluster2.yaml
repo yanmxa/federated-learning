@@ -3,4 +3,4 @@ kind: ClusterClaim
 metadata:
   name: federated-learning-sample.client-data
 spec:
-  value: data-config-cluster1
+  value: /data/private/cluster2

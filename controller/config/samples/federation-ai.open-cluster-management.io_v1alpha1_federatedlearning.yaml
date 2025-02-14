@@ -1,4 +1,3 @@
-cat <<EOF | kubectl apply -f -
 apiVersion: federation-ai.open-cluster-management.io/v1alpha1
 kind: FederatedLearning
 metadata:
@@ -6,7 +5,7 @@ metadata:
 spec:
   framework: flower
   server:
-    image: quay.io/myan/flower-app:lightly
+    image: quay.io/myan/flower-app
     rounds: 10
     minAvailableClients: 2
     listeners:
@@ -19,7 +18,7 @@ spec:
       path: /data/models
       size: 2Gi
   client:
-    image: quay.io/myan/flower-app:lightly
+    image: quay.io/myan/flower-app
     placement:
       clusterSets:
         - global
@@ -29,4 +28,3 @@ spec:
               matchExpressions:
                 - key: federated-learning-sample.client-data
                   operator: Exists
-EOF
