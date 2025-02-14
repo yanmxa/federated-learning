@@ -140,7 +140,7 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if instance.Status.Phase == flv1alpha1.PhaseInProcess ||
 		instance.Status.Phase == flv1alpha1.PhaseCompleted {
 		job := &batchv1.Job{}
-		err = r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: instance.Name}, job)
+		err = r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: getSeverName(instance.Name)}, job)
 		if err != nil {
 			return ctrl.Result{}, err
 		}

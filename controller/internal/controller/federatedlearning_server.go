@@ -54,7 +54,7 @@ func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Contex
 	unstructuredObjects, err := render.Render("server", "", func(profile string) (interface{}, error) {
 		return manifests.FederatedLearningServerParams{
 			Namespace:           instance.Namespace,
-			Name:                fmt.Sprintf("%s-server", instance.Name),
+			Name:                getSeverName(instance.Name),
 			Image:               instance.Spec.Server.Image,
 			NumberOfRounds:      instance.Spec.Server.Rounds,
 			MinAvailableClients: instance.Spec.Server.MinAvailableClients,
@@ -91,6 +91,10 @@ func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Contex
 	}
 
 	return nil
+}
+
+func getSeverName(instanceName string) string {
+	return fmt.Sprintf("%s-server", instanceName)
 }
 
 // get the address by NodePort, LoadBalancer or Route
