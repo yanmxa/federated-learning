@@ -5,7 +5,7 @@ metadata:
 spec:
   framework: flower
   server:
-    image: quay.io/myan/flower-app
+    image: quay.io/myan/flower-app:lightly
     rounds: 10
     minAvailableClients: 2
     listeners:
@@ -18,7 +18,7 @@ spec:
       path: /data/models
       size: 2Gi
   client:
-    image: quay.io/myan/flower-app
+    image: quay.io/myan/flower-app:lightly
     placement:
       clusterSets:
         - global
