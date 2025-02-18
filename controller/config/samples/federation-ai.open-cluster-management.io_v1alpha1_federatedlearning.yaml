@@ -6,7 +6,7 @@ spec:
   framework: flower
   server:
     image: quay.io/myan/flower-app:lightly
-    rounds: 10
+    rounds: 3
     minAvailableClients: 2
     listeners:
       - name: server-listener
