@@ -73,7 +73,6 @@ from datetime import datetime
 from app_torch.utils import get_latest_model_file, load_model, save_model
 
 def start_server():
-    model_time = f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
     model = Net()
     
     # if the model path not exist create one
@@ -119,8 +118,9 @@ def start_server():
               params_dict = zip(net.state_dict().keys(), aggregated_ndarrays)
               state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
               net.load_state_dict(state_dict, strict=True)
-              
-              model_file = os.path.join(model_dir, f"model_{model_time}_round_{rnd}.pth")
+              model_time = f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
+              model_file = os.path.join(model_dir, f"model_round_{rnd}_{model_time}.pth")
+              print("model_file", model_file)
               
               # algin with the save model
               torch.save(net.state_dict(), model_file)
