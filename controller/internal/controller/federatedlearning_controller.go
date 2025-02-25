@@ -18,8 +18,9 @@ package controller
 
 import (
 	"context"
-	"os"
-	"path/filepath"
+	"fmt"
+	"path"
+	"strings"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -170,18 +171,25 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return ctrl.Result{}, nil
 }
 
+// TODO: enhance it
 func getDirFile(modelPath string) (dir, file string, err error) {
-	info, err := os.Stat(modelPath)
-	if err != nil {
-		return "", "", err
+	// Check if the path is empty
+	if modelPath == "" {
+		return "", "", fmt.Errorf("path cannot be empty")
 	}
-	if info.IsDir() {
-		return modelPath, "", nil
-	} else {
-		dir := filepath.Dir(modelPath)
-		file := filepath.Base(modelPath)
+
+	// Get the base (file or dir) and the directory part
+	dir = path.Dir(modelPath)
+	file = path.Base(modelPath)
+
+	// If the file contains a dot, treat it as a file, otherwise it's a directory
+	if strings.Contains(file, ".") {
+		// It's a file
 		return dir, file, nil
 	}
+
+	// It's a directory, return empty string for file
+	return dir, "", nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

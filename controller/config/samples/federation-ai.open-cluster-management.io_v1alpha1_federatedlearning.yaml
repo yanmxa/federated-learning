@@ -17,7 +17,6 @@ spec:
       name: model-pvc
       path: /data/models
       size: 2Gi
-      # initModel: ""
   client:
     image: quay.io/myan/flower-app:latest
     placement:
