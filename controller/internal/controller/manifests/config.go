@@ -6,8 +6,9 @@ type FederatedLearningServerParams struct {
 	Image               string
 	NumberOfRounds      int
 	MinAvailableClients int
-	StorageName         string
-	StoragePath         string
+	StorageVolumeName   string
+	ModelDir            string
+	InitModel           string
 	ListenerType        string
 	ListenerPort        int
 }

@@ -51,6 +51,11 @@ func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Contex
 		return fmt.Errorf("unsupported listener type: %s", instance.Spec.Server.Listeners[0].Type)
 	}
 
+	modelDir, initModel, err := getDirFile(instance.Spec.Server.Storage.ModelPath)
+	if err != nil {
+		return err
+	}
+
 	render, deployer := applier.NewRenderer(manifests.ServerFiles), applier.NewDeployer(r.Client)
 	unstructuredObjects, err := render.Render("server", "", func(profile string) (interface{}, error) {
 		return manifests.FederatedLearningServerParams{
@@ -59,8 +64,9 @@ func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Contex
 			Image:               instance.Spec.Server.Image,
 			NumberOfRounds:      instance.Spec.Server.Rounds,
 			MinAvailableClients: instance.Spec.Server.MinAvailableClients,
-			StoragePath:         instance.Spec.Server.Storage.Path,
-			StorageName:         instance.Spec.Server.Storage.Name,
+			ModelDir:            modelDir,
+			InitModel:           initModel,
+			StorageVolumeName:   instance.Spec.Server.Storage.Name,
 			ListenerType:        string(instance.Spec.Server.Listeners[0].Type),
 			ListenerPort:        instance.Spec.Server.Listeners[0].Port,
 		}, nil

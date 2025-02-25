@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -144,7 +146,12 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		message := "Model aggregated successfully. Directory: " + instance.Spec.Server.Storage.Path
+
+		modelDir, _, err := getDirFile(instance.Spec.Server.Storage.ModelPath)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		message := "Model aggregated successfully. Directory: " + modelDir
 		if job.Status.Succeeded > 0 && message != instance.Status.Message {
 			log.Info("the job has been completed")
 			instance.Status.Phase = flv1alpha1.PhaseCompleted
@@ -161,6 +168,20 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func getDirFile(modelPath string) (dir, file string, err error) {
+	info, err := os.Stat(modelPath)
+	if err != nil {
+		return "", "", err
+	}
+	if info.IsDir() {
+		return modelPath, "", nil
+	} else {
+		dir := filepath.Dir(modelPath)
+		file := filepath.Base(modelPath)
+		return dir, file, nil
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.

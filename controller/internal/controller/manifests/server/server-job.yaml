@@ -20,7 +20,8 @@ spec:
         - server # Maps to the entrypoint.sh logic
         - --num-rounds={{ .NumberOfRounds }}
         - --min-available-clients={{ .MinAvailableClients }}
-        - --model-dir={{ .StoragePath }}
+        - --model-dir={{ .ModelDir }}
+        - --init-model={{ .InitModel }}
         volumeMounts:
         - name: model-volume
           mountPath: {{ .StoragePath }}
@@ -28,4 +29,4 @@ spec:
       volumes:
       - name: model-volume
         persistentVolumeClaim:
-          claimName: {{ .StorageName }}
+          claimName: {{ .StorageVolumeName }}

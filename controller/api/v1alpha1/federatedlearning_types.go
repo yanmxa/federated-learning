@@ -82,10 +82,10 @@ type ServerSpec struct {
 
 // ModelStorageSpec defines the storage specification for the model.
 type ModelStorageSpec struct {
-	Name string      `json:"name,omitempty"`
-	Type StorageType `json:"type,omitempty"`
-	Path string      `json:"path,omitempty"`
-	Size string      `json:"size,omitempty"` // +optional
+	Name      string      `json:"name,omitempty"`
+	Type      StorageType `json:"type,omitempty"`
+	Size      string      `json:"size,omitempty"` // +optional
+	ModelPath string      `json:"path,omitempty"` // 
 }
 
 // StorageType represents the type of storage.
