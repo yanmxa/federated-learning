@@ -97,12 +97,12 @@ def start_server():
     # /data/models/2024-01-01-00-00-00.*
     # /data/models/2024-01-02-00-00-00.*
     last_model_file = get_latest_model_file(args.model_dir)
-    if last_model_file is None and args.init_model != "":
+    if last_model_file is None and args.init_model == "":
         save_model(model, os.path.join(args.model_dir, "model_init.pth"))
     elif last_model_file:
         print("Loading model from", last_model_file)
         model = load_model(model, last_model_file)
-    elif args.init_model:
+    elif args.init_model != "":
         print("Loading model from", args.init_model)
         model = load_model(model, os.path.join(args.model_dir, args.init_model))
 
