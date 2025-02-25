@@ -24,7 +24,7 @@ spec:
         - --init-model={{ .InitModel }}
         volumeMounts:
         - name: model-volume
-          mountPath: {{ .StoragePath }}
+          mountPath: {{ .ModelDir }}
       restartPolicy: Never
       volumes:
       - name: model-volume
