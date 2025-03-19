@@ -85,7 +85,7 @@ type ModelStorageSpec struct {
 	Name      string      `json:"name,omitempty"`
 	Type      StorageType `json:"type,omitempty"`
 	Size      string      `json:"size,omitempty"` // +optional
-	ModelPath string      `json:"path,omitempty"` // 
+	ModelPath string      `json:"path,omitempty"` //
 }
 
 // StorageType represents the type of storage.
@@ -106,8 +106,8 @@ type ListenerSpec struct {
 
 // FederatedLearningStatus defines the observed state of FederatedLearning.
 type FederatedLearningStatus struct {
-	// +kubebuilder:validation:Enum=Pending;InProcess;Completed;Failed;Start
-	// +kubebuilder:default:=Pending
+	// +kubebuilder:validation:Enum=Waiting;Running;Completed;Failed;Start
+	// +kubebuilder:default:=Waiting
 	Phase     Phase            `json:"phase,omitempty"`
 	Message   string           `json:"message,omitempty"`
 	Listeners []ListenerStatus `json:"listeners,omitempty"`
@@ -139,8 +139,8 @@ type Phase string
 
 const (
 	PhaseStart     Phase = "Start" // Indicates the manual trigger to initiate the federated learning process
-	PhasePending   Phase = "Pending"
-	PhaseInProcess Phase = "InProcess"
+	PhaseWaiting   Phase = "Waiting"
+	PhaseRunning   Phase = "Running"
 	PhaseCompleted Phase = "Completed"
 	PhaseFailed    Phase = "Failed"
 )

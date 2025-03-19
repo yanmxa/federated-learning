@@ -1,4 +1,4 @@
-"""cirfar10-torch: A Flower / PyTorch app."""
+"""torch: A Flower / PyTorch app."""
 
 import torch
 import torch.optim as optim
@@ -52,7 +52,6 @@ def client_fn(context: Context):
     # Load model and data
     net = Net()
     cluster_config = context.node_config["cluster-data-config"]
-    # cluster_id = context.node_config["partition-id"]
     local_epochs = context.run_config["local-epochs"]
 
     trainloader, valloader = load_data(cluster_config)
@@ -61,63 +60,49 @@ def client_fn(context: Context):
     return FlowerClient(net, trainloader, valloader, local_epochs).to_client()
 
 
-# # Flower ClientApp
-# app = ClientApp(
-#     client_fn,
-# )
-
-# cluster client
+# add run client 
 import flwr as fl 
 import argparse
-
-# Get partition id
-parser = argparse.ArgumentParser(description="Flower")
-parser.add_argument(
-    "--data-config",
-    default="cluster1",
-    type=str,
-    help="Data configuration for the cluster client.",
-)
-parser.add_argument('--epochs', type=int, default=1, help='number of epochs to train (default: 1)')
-parser.add_argument(
-    "--server-address", type=str, default="127.0.0.1:8080", help="Server Address"
-)
-args = parser.parse_args()
-cluster_data_config = str(args.data_config)
-local_epochs = args.epochs
-
-print(f"choose the dataset: {cluster_data_config}")
-print(f"epochs: {local_epochs}")
-print(f"address: {args.server_address}")
-        
 import time
 
 MAX_RETRIES = 60
 RETRY_DELAY = 10  # seconds
-for attempt in range(MAX_RETRIES):
-    try:
-        fl.client.start_client(
-            server_address=args.server_address,
-            client=client_fn(context=Context(
-                run_id="",
-                node_id="",
-                state=None,
-                node_config={
-                    "cluster-data-config": cluster_data_config,
-                },
-                run_config={
-                    "local-epochs": local_epochs,
-                },
-            )),
-        )
-        print("Client started successfully.")
-        break  # Exit the loop if successful
-    except Exception as e:
-        print(f"Attempt {attempt + 1} failed with error: {e}")
-        if attempt < MAX_RETRIES - 1:  # If not the last attempt, wait before retrying
-            print(f"Retrying in {RETRY_DELAY} seconds...")
-            time.sleep(RETRY_DELAY)
-        else:
-            print("Max retries reached. Exiting.")
-            raise e  # Re-raise the exception after the last attempt
+def run_client():
+    """Parses arguments and starts the federated learning client with retry logic."""
+    parser = argparse.ArgumentParser(description="Flower Federated Learning Client")
+    parser.add_argument("--data-config", default="cluster1", type=str, help="Cluster-specific data configuration.")
+    parser.add_argument("--epochs", type=int, default=1, help="Number of training epochs.")
+    parser.add_argument("--server-address", type=str, default="127.0.0.1:8080", help="Federated Learning server address.")
+    args = parser.parse_args()
 
+    print(f"Using dataset: {args.data_config}")
+    print(f"Training for {args.epochs} epochs")
+    print(f"Connecting to server at: {args.server_address}")
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            fl.client.start_client(
+                server_address=args.server_address,
+                client=client_fn(
+                    context=Context(
+                        run_id="",
+                        node_id="",
+                        state=None,
+                        node_config={"cluster-data-config": args.data_config},
+                        run_config={"local-epochs": args.epochs},
+                    )
+                ),
+            )
+            print("Client started successfully.")
+            break
+        except Exception as e:
+            print(f"Attempt {attempt + 1} failed: {e}")
+            if attempt < MAX_RETRIES - 1:
+                print(f"Retrying in {RETRY_DELAY} seconds...")
+                time.sleep(RETRY_DELAY)
+            else:
+                print("Max retries reached. Exiting.")
+                raise e
+
+if __name__ == "__main__":
+    run_client()

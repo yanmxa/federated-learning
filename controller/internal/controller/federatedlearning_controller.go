@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -36,14 +37,15 @@ import (
 	"github/open-cluster-management/federated-learning/internal/logger"
 )
 
-var (
-	PendingInitMessage            = "Waiting for the server and clients to be ready"
-	PendingAvailableClientMessage = "Expected at least %d clients, but only %d clusters meet the criteria"
-	InProcessMessage              = "Selected %d clusters for the federated learning process"
-	log                           = logger.DefaultZapLogger()
-)
+var log = logger.DefaultZapLogger()
 
-const FederatedLearningFinalizer = "federated-learning.open-cluster-management.io/resource-cleanup"
+const (
+	FederatedLearningFinalizer     = "federated-learning.open-cluster-management.io/resource-cleanup"
+	MessageWaitingReady            = "Awaiting server and client readiness"
+	MessageWaitingAvailableClients = "Expected %d clusters, but only %d meet the criteria"
+	MessageRunning                 = "Assigned %d clusters for client execution in model training"
+	MessageCompleted               = "Model training successful. Check storage for details"
+)
 
 // FederatedLearningReconciler reconciles a FederatedLearning object
 type FederatedLearningReconciler struct {
@@ -73,9 +75,9 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if err != nil {
 			instance.Status.Message = err.Error()
 			instance.Status.Phase = flv1alpha1.PhaseFailed
-			if e := r.Status().Update(ctx, instance); e != nil {
-				log.Errorf("failed to update the instance phase into failed: %v", e)
-			}
+		}
+		if e := r.Status().Update(ctx, instance); e != nil {
+			log.Errorf("failed to update the instance phase into failed: %v", e)
 		}
 	}()
 
@@ -84,8 +86,7 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if err := r.pruneClientResources(ctx, instance); err != nil {
 			return ctrl.Result{}, err
 		}
-		if containsString(instance.Finalizers, FederatedLearningFinalizer) {
-			instance.Finalizers = removeString(instance.Finalizers, FederatedLearningFinalizer)
+		if controllerutil.RemoveFinalizer(instance, FederatedLearningFinalizer) {
 			if err = r.Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -94,19 +95,8 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// add finalizer
-	if !containsString(instance.Finalizers, FederatedLearningFinalizer) {
-		log.Info("FederatedLearning finalizer already exists")
-		instance.Finalizers = append(instance.Finalizers, FederatedLearningFinalizer)
+	if controllerutil.AddFinalizer(instance, FederatedLearningFinalizer) {
 		if err = r.Update(ctx, instance); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	// Initialize status.phase to Pending if not set
-	if instance.Status.Phase == "" {
-		instance.Status.Phase = flv1alpha1.PhasePending
-		instance.Status.Message = PendingInitMessage
-		if err := r.Status().Update(ctx, instance); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -116,31 +106,32 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, nil
 	}
 
-	// Start -> Pending
-	if instance.Status.Phase == flv1alpha1.PhaseStart {
-		instance.Status.Phase = flv1alpha1.PhasePending
-		err = r.Client.Status().Update(ctx, instance)
-		if err != nil {
-			return ctrl.Result{}, err
+	// Initialize phase with Waiting
+	if instance.Status.Phase == "" {
+		instance.Status.Phase = flv1alpha1.PhaseWaiting
+		instance.Status.Message = MessageWaitingReady
+		if e := r.Status().Update(ctx, instance); e != nil {
+			return ctrl.Result{}, e
 		}
 	}
 
-	// Pending -> InProcess
-	if instance.Status.Phase == flv1alpha1.PhasePending || instance.Status.Phase == flv1alpha1.PhaseInProcess {
+	// Waiting -> Running
+	if instance.Status.Phase == flv1alpha1.PhaseWaiting || instance.Status.Phase == flv1alpha1.PhaseRunning {
 		// 1. server: storage, job (rounds, minAvailableClients)
 		if err := r.federatedLearningServer(ctx, instance); err != nil {
+			log.Errorf("failed to create/update the server: %v", err)
 			return ctrl.Result{}, err
 		}
 
-		// 2. client: placement(based on selected cluster -> InProcess), InProcess -> generate manifestwork
+		// 2. client: placement(based on selected cluster -> Running), Running -> generate manifestwork
 		if err := r.federatedLearningClient(ctx, instance); err != nil {
-			log.Error(err, "failed to update the client status")
+			log.Errorf("failed to create/update the clients: %v", err)
 			return ctrl.Result{}, err
 		}
 	}
 
-	// InProcess -> Completed
-	if instance.Status.Phase == flv1alpha1.PhaseInProcess ||
+	// Running -> Completed
+	if instance.Status.Phase == flv1alpha1.PhaseRunning ||
 		instance.Status.Phase == flv1alpha1.PhaseCompleted {
 		job := &batchv1.Job{}
 		err = r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: getSeverName(instance.Name)}, job)
@@ -148,23 +139,18 @@ func (r *FederatedLearningReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 
-		modelDir, _, err := getDirFile(instance.Spec.Server.Storage.ModelPath)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		message := "Model aggregated successfully. Directory: " + modelDir
-		if job.Status.Succeeded > 0 && message != instance.Status.Message {
+		if job.Status.Succeeded > 0 && MessageCompleted != instance.Status.Message {
 			log.Info("the job has been completed")
 			instance.Status.Phase = flv1alpha1.PhaseCompleted
-			instance.Status.Message = message
+			instance.Status.Message = MessageCompleted
 			if err = r.Status().Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
 	}
 
-	// requeue if the phase is InProcess or Pending
-	if instance.Status.Phase == flv1alpha1.PhaseInProcess || instance.Status.Phase == flv1alpha1.PhasePending {
+	// requeue if the phase is Waiting or Running
+	if instance.Status.Phase == flv1alpha1.PhaseRunning || instance.Status.Phase == flv1alpha1.PhaseWaiting {
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
@@ -209,23 +195,4 @@ func (r *FederatedLearningReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 		Named("federatedlearning").
 		Complete(r)
-}
-
-func containsString(slice []string, str string) bool {
-	for _, item := range slice {
-		if item == str {
-			return true
-		}
-	}
-	return false
-}
-
-func removeString(slice []string, str string) []string {
-	result := []string{}
-	for _, item := range slice {
-		if item != str {
-			result = append(result, item)
-		}
-	}
-	return result
 }

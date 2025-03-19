@@ -31,7 +31,8 @@ import (
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;delete;update;create
 // +kubebuilder:rbac:groups="route.openshift.io",resources=routes,verbs=get;list;watch;create;update;delete
 
-func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Context, instance *flv1alpha1.FederatedLearning) error {
+func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Context, 
+	instance *flv1alpha1.FederatedLearning) error {
 	// don't delete the storage and cause the job's owner is instance
 	if instance.DeletionTimestamp != nil {
 		return nil
@@ -40,7 +41,7 @@ func (r *FederatedLearningReconciler) federatedLearningServer(ctx context.Contex
 		return err
 	}
 
-	if instance.Spec.Server.Listeners == nil || len(instance.Spec.Server.Listeners) == 0 {
+	if len(instance.Spec.Server.Listeners) == 0 {
 		return fmt.Errorf("no listeners specified")
 	}
 

@@ -1,34 +1,33 @@
 # Federated Learning Controller for Open Cluster Management
 
-![Controller Architecture](../asset/controller.png)
 
-This Kubernetes controller orchestrates the startup and management of federated learning processes in an Open Cluster Management environment. The `FederatedLearning` Custom Resource Definition (CRD) defines a federated learning process, supporting frameworks like Flower, OpenFL, and others.
+This Kubernetes controller automates the deployment and management of federated learning in an Open Cluster Management environment. The `FederatedLearning` Custom Resource Definition (CRD) provides a unified open interface for integrating frameworks such as Flower, OpenFL, and NVIDIA FLARE. It leverages Kubernetes-native resources to provision servers, launch clients, and orchestrate the training lifecycle across a multicluster environment.
 
----
-
-## Description
-
-
-The controller reconciles `FederatedLearning` instances, managing the lifecycle of **server** and **client** components that handle model training and aggregation:
-
-  - **Server**:
-
-    Creates a Kubernetes Job (using a built-in manifest template) expected to start with:
-
-    ```bash
-    server --num-rounds <number-of-rounds>
-    ```
-
-  - **Client**:
-    Creates a Kubernetes Job via ManifestWorks from the hub cluster, expected to start with:
-
-    ```bash
-    client --data-config <data-configuration> --server-address <aggregator-address>
-    ```
+![Controller Architecture](./assets/images/controller.png)
 
 ---
 
-This controller simplifies the orchestration of federated learning tasks by leveraging native Kubernetes resources to deploy servers, spawn clients, and coordinate their training processes.
+## Bring Federated Learning Across Multiple Clusters
+
+This controller enables federated learning across a **multicluster environment** without the need for manual orchestration. The only requirement is to **containerize your workload**, making it compatible with different federated learning frameworks.  
+
+The controller reconciles `FederatedLearning` instances, managing the lifecycle of **server** and **client** components that handle model training and aggregation. To integrate with the provided interface, servers and clients should follow the expected startup patterns.  
+
+For example, see: [Flower PyTorch App](./../flower/app-torch/)
+
+### Server
+Creates a Kubernetes Job using a built-in manifest template, expected to start with:  
+```bash
+server --num-rounds <number-of-rounds> ...
+```
+
+### Client  
+Creates a Kubernetes Job via **ManifestWorks** from the hub cluster, expected to start with:  
+```bash
+client --data-config <data-configuration> --server-address <aggregator-address> ...
+```
+
+--- 
 
 ## Getting Started
 
@@ -50,9 +49,9 @@ make run
 
 **1. Build and push your image to the location specified by `IMG`:**
 ```sh
-make docker-build docker-push IMG=<some-registry>/controller:tag
+make docker-build docker-push IMG=<IMG>
 # or
-make docker-build docker-push REGISTRY=<some-registry> 
+make docker-build docker-push REGISTRY=<REGISTRY> 
 ```
 **NOTE:** This image ought to be published in the personal registry you specified.
 And it is required to have access to pull the image from the working environment.
@@ -70,8 +69,7 @@ privileges or be logged in as admin.
 
 **3. Create a FederatedLearning instance**
 
-```sh
-cat <<EOF | oc apply -f -
+```yaml
 apiVersion: federation-ai.open-cluster-management.io/v1alpha1
 kind: FederatedLearning
 metadata:
@@ -79,8 +77,8 @@ metadata:
 spec:
   framework: flower
   server:
-    image: quay.io/myan/flower-app
-    rounds: 10
+    image: quay.io/open-cluster-management/flower-app-torch:latest
+    rounds: 3
     minAvailableClients: 2
     listeners:
       - name: server-listener
@@ -92,7 +90,7 @@ spec:
       path: /data/models
       size: 2Gi
   client:
-    image: quay.io/myan/flower-app
+    image: quay.io/open-cluster-management/flower-app-torch:latest
     placement:
       clusterSets:
         - global
@@ -102,8 +100,8 @@ spec:
               matchExpressions:
                 - key: federated-learning-sample.client-data
                   operator: Exists
-EOF
 ```
+**Note:** You can replace the above server and client images with those from your own registry.
 
 **4. Mark the data from the Managed clusters**
 

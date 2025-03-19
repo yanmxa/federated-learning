@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# docker run --rm quay.io/myan/flower-app server --num-rounds 20
-# docker run --rm quay.io/myan/flower-app client --data-config "data-cluster1" --server-address 172.17.0.2:8080
+# docker run --rm image server --num-rounds 20
+# docker run --rm image client --data-config "data-cluster1" --server-address 172.17.0.2:8080
 # pip install -e .
 
 # Set writable HOME and ensure /app/.venv has proper permissions

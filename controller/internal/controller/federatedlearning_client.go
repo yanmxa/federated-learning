@@ -53,14 +53,9 @@ func (r *FederatedLearningReconciler) federatedLearningClient(ctx context.Contex
 		return err
 	}
 
-	if err = r.toInProcess(ctx, instance, placement); err != nil {
+	// try to switch the phase from waiting into running
+	if err = r.toRunning(ctx, instance, placement); err != nil {
 		log.Error(err)
-		return err
-	}
-
-	// generate manifestwork for the selected cluster
-	err = r.generateWorkload(ctx, instance, placement)
-	if err != nil {
 		return err
 	}
 	return nil
@@ -115,7 +110,8 @@ func (r *FederatedLearningReconciler) generateWorkload(ctx context.Context, inst
 
 		}
 		message := fmt.Sprintf("applied %d manifestworks to the clusters", count)
-		if instance.Status.Phase == flv1alpha1.PhaseInProcess && instance.Status.Message != message {
+		if instance.Status.Phase == flv1alpha1.PhaseRunning && instance.Status.Message != message {
+			instance.Status.Phase = flv1alpha1.PhaseRunning
 			instance.Status.Message = message
 			if err := r.Status().Update(ctx, instance); err != nil {
 				return err
@@ -210,16 +206,16 @@ func (r *FederatedLearningReconciler) clusterWorkload(ctx context.Context, insta
 	return nil
 }
 
-// 1. If selectedClusters < minimizeClients, then requeue and update pending message
-// 2. Else switch to InProcess
-func (r *FederatedLearningReconciler) toInProcess(ctx context.Context, instance *flv1alpha1.FederatedLearning,
+// 1. If selectedClusters < minimizeClients, then requeue and update waiting message
+// 2. Else switch to running
+func (r *FederatedLearningReconciler) toRunning(ctx context.Context, instance *flv1alpha1.FederatedLearning,
 	placement *clusterv1beta1.Placement,
 ) error {
 	selectedClusters := placement.Status.NumberOfSelectedClusters
 	minimizeClients := instance.Spec.Server.MinAvailableClients
 	if selectedClusters < int32(minimizeClients) {
 		log.Infow("waiting for the available clients", "selected", selectedClusters, "minimize", minimizeClients)
-		message := fmt.Sprintf(PendingAvailableClientMessage, minimizeClients, selectedClusters)
+		message := fmt.Sprintf(MessageWaitingAvailableClients, minimizeClients, selectedClusters)
 		if message != instance.Status.Message {
 			instance.Status.Message = message
 			if err := r.Client.Status().Update(ctx, instance); err != nil {
@@ -230,10 +226,16 @@ func (r *FederatedLearningReconciler) toInProcess(ctx context.Context, instance 
 		return nil
 	}
 
-	message := fmt.Sprintf(InProcessMessage, selectedClusters)
-	if instance.Status.Phase != flv1alpha1.PhaseInProcess || instance.Status.Message != message {
-		log.Infow("switch to InProcess", "message", message)
-		instance.Status.Phase = flv1alpha1.PhaseInProcess
+	// generate manifestwork for the selected cluster
+	if err := r.generateWorkload(ctx, instance, placement); err != nil {
+		return err
+	}
+
+	// switch into running
+	message := fmt.Sprintf(MessageRunning, selectedClusters)
+	if instance.Status.Phase != flv1alpha1.PhaseRunning || instance.Status.Message != message {
+		log.Infow("switch to Running", "message", message)
+		instance.Status.Phase = flv1alpha1.PhaseRunning
 		instance.Status.Message = message
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
 			return err
